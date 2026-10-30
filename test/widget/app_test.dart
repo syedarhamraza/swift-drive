@@ -81,6 +81,21 @@ void main() {
       await tearDownScreen(tester, c);
     });
 
+    testWidgets('whole dock fits a 1024x600 hdpi head unit (683x400 dp)', (
+      tester,
+    ) async {
+      await pumpApp(tester, c, size: const Size(683, 400));
+      for (final label in ['Home', 'Apps', 'Settings']) {
+        expect(
+          find.byTooltip(label).hitTestable(),
+          findsOneWidget,
+          reason: label,
+        );
+      }
+      expect(tester.takeException(), isNull);
+      await tearDownScreen(tester, c);
+    });
+
     testWidgets('theme follows the setting instantly', (tester) async {
       await pumpApp(tester, c);
       Brightness brightness() =>

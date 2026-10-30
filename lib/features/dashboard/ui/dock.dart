@@ -65,10 +65,10 @@ class Dock extends ConsumerWidget {
     final hasSettings = entries.any(
       (e) => e is BuiltinEntry && e.id == 'settings',
     );
-    final children = [
-      for (final e in entries) _DockButton(entry: e),
+    final shown = [
+      ...entries,
       // Settings must always be reachable, even if the user removed it from the dock.
-      if (!hasSettings) const _DockButton(entry: BuiltinEntry('settings')),
+      if (!hasSettings) const BuiltinEntry('settings'),
     ];
     return Material(
       color: Theme.of(context).colorScheme.surface,
@@ -78,10 +78,24 @@ class Dock extends ConsumerWidget {
         child: SizedBox(
           width: vertical ? 88 : null,
           height: vertical ? null : 80,
-          child: ListView(
-            scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
-            padding: const EdgeInsets.all(SdSpace.sm),
-            children: children,
+          child: LayoutBuilder(
+            builder: (context, box) {
+              // Shrink buttons so the whole dock fits (e.g. 1024x600 at hdpi is only ~400 dp tall); below the
+              // minimum touch target the dock scrolls instead.
+              final main = vertical ? box.maxHeight : box.maxWidth;
+              final extent = ((main - 2 * SdSpace.sm) / shown.length).clamp(
+                SdSize.minTarget,
+                72.0,
+              );
+              return ListView(
+                scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
+                padding: const EdgeInsets.all(SdSpace.sm),
+                children: [
+                  for (final e in shown)
+                    _DockButton(entry: e, extent: extent, vertical: vertical),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -90,9 +104,17 @@ class Dock extends ConsumerWidget {
 }
 
 class _DockButton extends ConsumerWidget {
-  const _DockButton({required this.entry});
+  const _DockButton({
+    required this.entry,
+    required this.extent,
+    required this.vertical,
+  });
 
   final DockEntry entry;
+
+  /// Size along the dock; labels are dropped (tooltip remains) when there is no room for them.
+  final double extent;
+  final bool vertical;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -135,19 +157,21 @@ class _DockButton extends ConsumerWidget {
         borderRadius: BorderRadius.circular(SdRadius.button),
         onTap: onTap,
         child: SizedBox(
-          width: 72,
-          height: 72,
+          width: vertical ? 72 : extent,
+          height: vertical ? extent : 72,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               icon,
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
+              if (extent >= 64) ...[
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ],
           ),
         ),

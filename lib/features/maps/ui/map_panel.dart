@@ -208,8 +208,12 @@ class _MapPanelState extends ConsumerState<MapPanel> {
         );
     if (!_zoomedToFirstFix && _follow) {
       _zoomedToFirstFix = true;
-      // Zoom only: moving the target would dismiss the native follow mode.
-      c.animateCamera(CameraUpdate.zoomTo(15));
+      // Even a zoom-only camera update drops native follow mode (seen on the emulator), so re-arm it after.
+      c.animateCamera(CameraUpdate.zoomTo(15)).then((_) {
+        if (!mounted) return;
+        setState(() => _follow = true);
+        c.updateMyLocationTrackingMode(_trackingMode());
+      });
     }
   }
 
@@ -291,15 +295,17 @@ class _MapPanelState extends ConsumerState<MapPanel> {
                             ),
                       onMapCreated: _onMapCreated,
                       onStyleLoadedCallback: _onStyleLoaded,
-                      // Route and puck use our own layers. Plugin annotation managers would add 4 unused layers
-                      // and race style reloads (STYLE_NOT_READY on theme switch).
+                      // The route uses our own layers. Plugin annotation managers would add 4 unused layers and
+                      // race style reloads (STYLE_NOT_READY on theme switch).
                       annotationOrder: const [],
                       myLocationEnabled: true,
                       locationSource: const ManualLocationSource(),
                       myLocationTrackingMode: _trackingMode(),
                       myLocationRenderMode: MyLocationRenderMode.gps,
-                      onCameraTrackingDismissed: () =>
-                          setState(() => _follow = false),
+                      onCameraTrackingDismissed: () {
+                        AppLog.i('map', 'follow mode dismissed');
+                        setState(() => _follow = false);
+                      },
                       compassEnabled: !perf,
                       tiltGesturesEnabled: false,
                       attributionButtonPosition:

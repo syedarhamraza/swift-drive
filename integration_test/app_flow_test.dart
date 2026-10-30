@@ -50,7 +50,8 @@ void main() {
 
       // The drawer lists real launchable apps (SwiftDrive excludes itself). Launching one would send the
       // test to the background, so the native launch path is checked with a missing package instead.
-      await tester.tap(find.text('Apps'));
+      // Tooltip, not text: on small screens the dock shows icons only.
+      await tester.tap(find.byTooltip('Apps'));
       await waitFor(tester, find.byType(AppDrawerScreen));
       await tester.enterText(find.byType(TextField), 'Settings');
       await waitFor(
