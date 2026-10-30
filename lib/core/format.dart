@@ -38,3 +38,7 @@ String formatTemperature(double celsius, TempUnit unit) =>
     unit == TempUnit.celsius
     ? '${celsius.round()}°C'
     : '${(celsius * 9 / 5 + 32).round()}°F';
+
+/// Temperature without the unit letter, for forecast rows where the unit is already clear.
+String formatDegrees(double celsius, TempUnit unit) =>
+    '${(unit == TempUnit.celsius ? celsius : celsius * 9 / 5 + 32).round()}°';

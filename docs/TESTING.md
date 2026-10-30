@@ -4,8 +4,8 @@
 
 | Suite | Location | Runs on | Count |
 |---|---|---|---|
-| Dart unit tests | `test/unit/` | host (`flutter test`) | 52 |
-| Widget tests | `test/widget/` | host (`flutter test`) | 21 |
+| Dart unit tests | `test/unit/` | host (`flutter test`) | 56 |
+| Widget tests | `test/widget/` | host (`flutter test`) | 26 |
 | Native JUnit tests | `android/app/src/test/` | host JVM (`./gradlew :app:testDebugUnitTest`) | 4 |
 | Integration test | `integration_test/` | emulator or device, real platform channels | 1 flow |
 
@@ -36,6 +36,8 @@
   - state machine with fakes: no fix → unavailable; no results; offline → error; route → navigate → reroute
     after 3 off-route fixes → arrive → cancel
   - voice thresholds: 500/100 m once each; a late start says only the turn
+- **weather:** forecast parsing skips incomplete entries, survives a cache round trip, and loads caches written
+  before forecasts existed.
 - **misc:**
   - capability status and native error-code mapping; tolerant `DeviceReport` parsing
   - sunrise/sunset phases
@@ -59,6 +61,9 @@ by the fakes in `test/fakes/fakes.dart`. The fakes are never imported by `lib/`.
 - Drawer search and launch; a Settings toggle persists to storage; Diagnostics lists capabilities and exports
   JSON.
 - Lifecycle: native streams are cancelled in the background, and notification contents are dropped when hidden.
+- Redesign: the drawer panel opens from the rail and closes after a launch or on system Back; pager dots switch
+  weather → speed; the notification card's Read aloud speaks app, title and text; performance mode sets
+  `disableAnimations`.
 
 The embedded map is disabled in widget tests because MapLibre is a native platform view. It is covered by the
 emulator run.
@@ -102,7 +107,7 @@ example Android Studio's `jbr` folder.
 
 Run on 2026-10-30, Windows 11, Flutter 3.47.5:
 - `flutter analyze`: no issues.
-- `flutter test`: 73 passed, 0 failed (52 unit, 21 widget).
+- `flutter test`: 82 passed, 0 failed (56 unit, 26 widget).
 - JUnit: 4 passed, 0 failed.
 - Integration: passed on the emulator `SwiftDrive_HU_1280x800` (API 28) and on the vivo V2413 (Android 16).
 

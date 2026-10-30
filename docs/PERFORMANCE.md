@@ -2,9 +2,14 @@
 
 ## Rules the code follows
 
-- **No continuous animation.** No blur, no decorative motion, no indeterminate spinners on the dashboard. The
-  clock wakes once per minute (aligned to the minute). The media progress bar is extrapolated locally and runs
-  only while the card is visible and the session is playing.
+- **Event-driven motion only.** Transitions run once, for 150–350 ms, when something changes: drawer open and
+  close, pager page, new notification, track change, play/pause, next maneuver, ETA pill, recenter button.
+  Nothing loops, and there is no blur (`BackdropFilter`), shimmer, parallax or animated gradient. The only
+  spinner on the dashboard shows while a card waits for its first data. The clock wakes once per minute
+  (aligned to the minute). The media progress bar is extrapolated locally and runs only while the card is
+  visible and the session is playing.
+- **Performance mode and the system "remove animations" setting** both set `MediaQuery.disableAnimations`, and
+  every transition reads its duration through `SdMotion.of`, so all of them become instant.
 - **Rebuild scope.** Widgets watch narrow `select`s of providers. The map and each dashboard card sit in their
   own `RepaintBoundary`, so a speed update repaints only the speed card.
 - **No polling.** Location, media, notifications, packages and Bluetooth arrive as native broadcast or callback
@@ -16,8 +21,8 @@
   which redraws the whole map for about a second. A fix is pushed only when the car moved more than 3 m or turned
   more than 10°, plus one keep-alive every 25 s. The keep-alive stops MapLibre greying out the puck after 30 s;
   the plugin does not expose that timeout.
-- **Performance mode** turns off page transitions, the per-second media progress tick and the map compass, and
-  doubles the weather refresh interval.
+- **Performance mode** also turns off page transitions, the per-second media progress tick and the map compass,
+  and doubles the weather refresh interval.
 
 ## How it was measured
 
@@ -38,7 +43,8 @@ playing. A script runs:
 | Map style load (cached) | 21–27 ms | 175–204 ms |
 | Idle CPU, no location filter | 13.4 % of one core | – |
 | Idle CPU, 3 m / 10° filter, 15 s keep-alive | 7.6 % | 15.9 % |
-| Idle CPU, 3 m / 10° filter, 25 s keep-alive (current) | not re-measured | 8.4 % |
+| Idle CPU, 3 m / 10° filter, 25 s keep-alive | not re-measured | 8.4 % |
+| Idle CPU after the 2026 redesign (current) | not re-measured | 7.9 %; frames per 10 s 0 / 49 / 0 / 0 |
 | Idle Flutter frames per 10 s | 0 / 95 / 0 / 101 (before filter) | 42 / 0 / 56 / 0 / 0 (current) |
 | Memory (PSS) | 256–260 MB: Graphics 82–84, Native ≈ 58, Java ≈ 14 | Java 9.5 MB, Native 31.5 MB (graphics are host-side) |
 

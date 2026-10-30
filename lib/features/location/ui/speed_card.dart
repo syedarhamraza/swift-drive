@@ -24,32 +24,32 @@ class SpeedCard extends ConsumerWidget {
     Widget body;
     if (speed.status == SpeedStatus.valid && speed.metersPerSecond != null) {
       body = Row(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
         children: [
           Text(
             convertSpeed(speed.metersPerSecond!, unit).round().toString(),
-            style: t.displayMedium,
+            style: t.displayLarge?.copyWith(fontSize: 96, height: 1),
           ),
           const SizedBox(width: SdSpace.sm),
-          Text(unitLabel, style: t.titleMedium),
+          Text(unitLabel, style: t.titleLarge),
         ],
       );
     } else {
       body = _StatusLine(status: speed.status);
     }
 
+    // Fills its pager page: label on top, the reading centred in the remaining space.
     return SdCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text('GPS speed', style: t.bodySmall),
-          const SizedBox(height: SdSpace.xs),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: body,
+          Text('GPS speed (informational)', style: t.bodySmall),
+          Expanded(
+            child: Center(
+              child: FittedBox(fit: BoxFit.scaleDown, child: body),
+            ),
           ),
         ],
       ),

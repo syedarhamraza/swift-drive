@@ -331,7 +331,7 @@ class _MapPanelState extends ConsumerState<MapPanel> {
                       compassEnabled: !perf,
                       tiltGesturesEnabled: false,
                       attributionButtonPosition:
-                          AttributionButtonPosition.bottomLeft,
+                          AttributionButtonPosition.topRight,
                     ),
                   ),
           ),
@@ -366,6 +366,9 @@ class _Overlay extends ConsumerWidget {
         (n) => n.destination != null && n.phase != NavPhase.idle,
       ),
     );
+    final medium = SdMotion.of(context, SdMotion.medium);
+    Widget fade(Widget child, Animation<double> a) =>
+        FadeTransition(opacity: a, child: child);
     return Positioned.fill(
       child: Padding(
         padding: const EdgeInsets.all(SdSpace.md),
@@ -373,17 +376,55 @@ class _Overlay extends ConsumerWidget {
           children: [
             Align(
               alignment: Alignment.topLeft,
-              child: hasRoute
-                  ? NavBanner(mapAvailable: mapReady)
-                  : FilledButton.tonalIcon(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(200, SdSize.driveTarget),
+              child: AnimatedSwitcher(
+                duration: medium,
+                switchInCurve: SdMotion.curve,
+                transitionBuilder: fade,
+                layoutBuilder: (current, previous) => Stack(
+                  alignment: Alignment.topLeft,
+                  children: [...previous, ?current],
+                ),
+                child: hasRoute
+                    ? const ManeuverCard(key: ValueKey('route'))
+                    : FilledButton.tonalIcon(
+                        key: const ValueKey('search'),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(200, SdSize.driveTarget),
+                          alignment: Alignment.centerLeft,
+                        ),
+                        onPressed: () => showDestinationSheet(
+                          context,
+                          mapAvailable: mapReady,
+                        ),
+                        icon: const Icon(Icons.search),
+                        label: const Text('Where to?'),
                       ),
-                      onPressed: () =>
-                          showDestinationSheet(context, mapAvailable: mapReady),
-                      icon: const Icon(Icons.search),
-                      label: const Text('Where to?'),
-                    ),
+              ),
+            ),
+            // The ETA pill rises from the bottom edge when a route starts and sinks away when it ends.
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: AnimatedSwitcher(
+                duration: medium,
+                switchInCurve: SdMotion.curve,
+                switchOutCurve: SdMotion.exitCurve,
+                transitionBuilder: (child, a) => FadeTransition(
+                  opacity: a,
+                  child: SlideTransition(
+                    position: Tween(
+                      begin: const Offset(0, 1),
+                      end: Offset.zero,
+                    ).animate(a),
+                    child: child,
+                  ),
+                ),
+                child: hasRoute
+                    ? EtaPill(
+                        key: const ValueKey('eta'),
+                        mapAvailable: mapReady,
+                      )
+                    : const SizedBox.shrink(),
+              ),
             ),
             if (mapReady)
               Align(
@@ -391,31 +432,41 @@ class _Overlay extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton.filledTonal(
+                    AnimatedSwitcher(
+                      duration: medium,
+                      switchInCurve: SdMotion.curve,
+                      transitionBuilder: (child, a) =>
+                          ScaleTransition(scale: a, child: child),
+                      child: follow
+                          ? const SizedBox.shrink()
+                          : Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: SdSpace.sm,
+                              ),
+                              child: IconButton.filled(
+                                tooltip: 'Recenter',
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size(
+                                    SdSize.driveTarget,
+                                    SdSize.driveTarget,
+                                  ),
+                                ),
+                                onPressed: onRecenter,
+                                icon: const Icon(Icons.my_location),
+                              ),
+                            ),
+                    ),
+                    _MapButton(
                       tooltip: 'Zoom in',
+                      icon: Icons.add,
                       onPressed: onZoomIn,
-                      icon: const Icon(Icons.add),
                     ),
                     const SizedBox(height: SdSpace.sm),
-                    IconButton.filledTonal(
+                    _MapButton(
                       tooltip: 'Zoom out',
+                      icon: Icons.remove,
                       onPressed: onZoomOut,
-                      icon: const Icon(Icons.remove),
                     ),
-                    if (!follow) ...[
-                      const SizedBox(height: SdSpace.sm),
-                      IconButton.filled(
-                        tooltip: 'Recenter',
-                        style: IconButton.styleFrom(
-                          minimumSize: const Size(
-                            SdSize.driveTarget,
-                            SdSize.driveTarget,
-                          ),
-                        ),
-                        onPressed: onRecenter,
-                        icon: const Icon(Icons.my_location),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -424,6 +475,30 @@ class _Overlay extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Small round map control on a solid surface, readable over any map style.
+class _MapButton extends StatelessWidget {
+  const _MapButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => IconButton(
+    tooltip: tooltip,
+    onPressed: onPressed,
+    icon: Icon(icon),
+    style: IconButton.styleFrom(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      minimumSize: const Size(SdSize.minTarget, SdSize.minTarget),
+    ),
+  );
 }
 
 class _MapFallback extends ConsumerWidget {

@@ -5,9 +5,9 @@ noted; ⛔ unsupported by design or until hardware is verified.
 
 | Area | Status | Notes |
 |---|---|---|
-| Dashboard (map, media, clock/weather, speed, notifications, dock) | ✅ | Presets: balanced, map-focused, media-focused, compact. Automatic compact on small screens; stacked in portrait |
-| Dock | ✅ | Built-ins plus pinned apps; reorder/add/remove in Settings → Customise dock. A missing app offers Replace/Remove. Settings is always reachable |
-| App drawer | ✅ | Search by label or package, A–Z, favourites first, hide/unhide, pin to dock, assign to a factory role. Refreshes on install/uninstall |
+| Dashboard (map, media, weather, speed, notifications, rail) | ✅ | Rounded rail with clock and GPS state; map; card column; vertical pager (weather, speed, notifications, radio) with dots. Wide screens give the pager its own column. Presets: balanced, map-focused, media-focused, compact; automatic compact on small screens; stacked in portrait |
+| Dock (rail) | ✅ | Built-ins plus pinned apps as round icons with tooltips; reorder/add/remove in Settings → Customise dock. A missing app offers Replace/Remove. Apps and Settings are pinned at the bottom and always reachable |
+| App drawer | ✅ | Opens over the cards while the map stays visible; Back closes it. First tile exits to the factory launcher. Search by label or package, A–Z, favourites first, page up/down buttons, hide/unhide, pin to dock, assign to a factory role. Refreshes on install/uninstall |
 | Factory shortcuts (navigation, music, radio, phone, vehicle settings) | ✅ | The user picks installed apps; each is re-checked before launch |
 | Default HOME setup | ✅ | RoleManager dialog (API 29+) or the system Home settings |
 | Factory-launcher recovery | ✅ | Lists other HOME apps and launches them directly; written instructions as well |
@@ -20,8 +20,8 @@ noted; ⛔ unsupported by design or until hardware is verified.
 | External navigation | ✅ | `geo:` intent to the user's chosen navigation app |
 | GPS speed | ✅ | Doppler speed only, gated by accuracy, stale after 3 s, km/h or mph. Labelled informational |
 | Media | ✅ | All active media sessions, smart source selection, user source picker, play/pause/next/previous/seek, artwork |
-| Notifications | ✅ | Compact list, dismiss, hide non-essential. Memory only |
-| Weather | ✅ | Open-Meteo current conditions, cached with timestamp, offline state. Place name only when a Geocoder exists |
+| Notifications | ✅ | Newest message card with count, Read aloud (TTS, on request only) and Dismiss/Open; full list in a sheet; hide non-essential. Memory only. No reply (needs RemoteInput capture) |
+| Weather | ✅ | Open-Meteo current, feels-like, today's high/low, next 5 hours and 3 days in one request; cached with timestamp; offline state; Open-Meteo credit. Place name only when a Geocoder exists |
 | Theme | ✅ | Dark, light, system, or auto by sunrise/sunset (falls back to system without sun data). 5 accents |
 | Clock | ✅ | 12/24 h; minute-aligned timer, no per-second rebuilds |
 | Bluetooth status | 🟡 | Adapter state and connected A2DP/headset device names. No pairing UI (opens system Bluetooth settings) |

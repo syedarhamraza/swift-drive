@@ -12,14 +12,19 @@ class SdCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(SdSpace.lg),
     this.onTap,
+    this.color,
   });
 
   final Widget child;
   final EdgeInsets padding;
   final VoidCallback? onTap;
 
+  /// Defaults to the theme's card colour.
+  final Color? color;
+
   @override
   Widget build(BuildContext context) => Card(
+    color: color,
     clipBehavior: Clip.antiAlias,
     child: InkWell(
       onTap: onTap,

@@ -10,9 +10,12 @@ import '../../../core/storage/settings_providers.dart';
 /// Self-contained clock: only this widget rebuilds, once per minute, aligned to the minute boundary.
 /// It re-syncs on resume, so time-zone or manual clock changes show up immediately.
 class ClockText extends ConsumerStatefulWidget {
-  const ClockText({super.key, this.large = true});
+  const ClockText({super.key, this.large = true, this.compact = false});
 
   final bool large;
+
+  /// Time only, centred and scaled to fit (the rail).
+  final bool compact;
 
   @override
   ConsumerState<ClockText> createState() => _ClockTextState();
@@ -66,6 +69,16 @@ class _ClockTextState extends ConsumerState<ClockText>
   Widget build(BuildContext context) {
     final use24h = ref.watch(settingsProvider.select((s) => s.use24h));
     final t = Theme.of(context).textTheme;
+    if (widget.compact) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          formatClock(_now, use24h: use24h),
+          style: t.titleMedium,
+          maxLines: 1,
+        ),
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,

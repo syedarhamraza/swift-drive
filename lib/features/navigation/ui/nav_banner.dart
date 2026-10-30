@@ -30,9 +30,114 @@ IconData maneuverIcon(RouteStep step) {
   };
 }
 
-/// Route status over the map. Maneuvers come only from the routing provider's step data.
-class NavBanner extends ConsumerWidget {
-  const NavBanner({super.key, required this.mapAvailable});
+/// Next maneuver (green while guiding) or the route status, top-left over the map. Maneuvers come only
+/// from the routing provider's step data.
+class ManeuverCard extends ConsumerWidget {
+  const ManeuverCard({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final nav = ref.watch(navigationProvider);
+    final unit = ref.watch(settingsProvider.select((s) => s.speedUnit));
+    final scheme = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+    final progress = nav.progress;
+    final step = progress?.nextStep;
+    final guiding =
+        step != null &&
+        (nav.phase == NavPhase.navigating || nav.phase == NavPhase.rerouting);
+    final fg = guiding ? Colors.white : scheme.onSurface;
+
+    final Widget content = guiding
+        ? Row(
+            children: [
+              Icon(maneuverIcon(step), size: 52, color: fg),
+              const SizedBox(width: SdSpace.md),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      nav.phase == NavPhase.rerouting
+                          ? 'Rerouting…'
+                          : formatDistance(
+                              progress!.metersToNextStep ?? 0,
+                              unit,
+                            ),
+                      style: t.titleMedium?.copyWith(color: Colors.white70),
+                    ),
+                    Text(
+                      step.instruction,
+                      style: t.titleLarge?.copyWith(color: fg),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          )
+        : Text(
+            switch (nav.phase) {
+              NavPhase.calculating => 'Calculating route…',
+              NavPhase.rerouting => 'Rerouting…',
+              NavPhase.arrived => 'You have arrived',
+              NavPhase.error ||
+              NavPhase.unavailable => nav.message ?? 'Route unavailable',
+              NavPhase.routeReady => nav.destination?.name ?? 'Route ready',
+              _ => 'Head to ${nav.destination?.name ?? 'destination'}',
+            },
+            style: t.titleMedium?.copyWith(color: fg),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          );
+
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 380),
+      child: AnimatedContainer(
+        duration: SdMotion.of(context, SdMotion.medium),
+        curve: SdMotion.curve,
+        padding: const EdgeInsets.symmetric(
+          horizontal: SdSpace.lg,
+          vertical: SdSpace.md,
+        ),
+        decoration: BoxDecoration(
+          color: guiding ? SdColors.navGreen : scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(SdRadius.card),
+        ),
+        // Each new maneuver slides up into place.
+        child: AnimatedSwitcher(
+          duration: SdMotion.of(context, SdMotion.medium),
+          switchInCurve: SdMotion.curve,
+          switchOutCurve: SdMotion.exitCurve,
+          layoutBuilder: (current, previous) => Stack(
+            alignment: Alignment.centerLeft,
+            children: [...previous, ?current],
+          ),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween(
+                begin: const Offset(0, 0.3),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          ),
+          child: KeyedSubtree(
+            key: ValueKey((nav.phase, progress?.nextStepIndex)),
+            child: content,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom-left pill: end route, remaining time and arrival, and the route actions.
+class EtaPill extends ConsumerWidget {
+  const EtaPill({super.key, required this.mapAvailable});
 
   final bool mapAvailable;
 
@@ -43,110 +148,80 @@ class NavBanner extends ConsumerWidget {
     final controller = ref.read(navigationProvider.notifier);
     final t = Theme.of(context).textTheme;
     final progress = nav.progress;
-    final step = progress?.nextStep;
+    final arrived = nav.phase == NavPhase.arrived;
 
-    final Widget headline = switch (nav.phase) {
-      NavPhase.calculating => const Text('Calculating route…'),
-      NavPhase.rerouting => const Text('Rerouting…'),
-      NavPhase.arrived => const Text('You have arrived'),
-      NavPhase.error ||
-      NavPhase.unavailable => Text(nav.message ?? 'Route unavailable'),
-      NavPhase.routeReady => Text(
-        nav.destination?.name ?? 'Route ready',
+    final Widget summary;
+    if (progress != null && !arrived) {
+      final arrival = DateTime.now().add(
+        Duration(seconds: progress.remainingSeconds.round()),
+      );
+      summary = Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: formatDuration(progress.remainingSeconds),
+              style: const TextStyle(
+                color: SdColors.etaGreen,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            TextSpan(
+              text:
+                  ' · ${formatClock(arrival, use24h: settings.use24h)} · '
+                  '${formatDistance(progress.remainingMeters, settings.speedUnit)}',
+            ),
+          ],
+        ),
+        style: t.titleMedium,
+        maxLines: 1,
+      );
+    } else {
+      summary = Text(
+        nav.destination?.name ?? 'Route',
+        style: t.titleMedium,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-      ),
-      _ when step != null => Row(
-        children: [
-          Icon(maneuverIcon(step), size: 44),
-          const SizedBox(width: SdSpace.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  formatDistance(
-                    progress!.metersToNextStep ?? 0,
-                    settings.speedUnit,
-                  ),
-                  style: t.headlineSmall,
-                ),
-                Text(
-                  step.instruction,
-                  style: t.titleMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+      );
+    }
+
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      shape: const StadiumBorder(),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: SdSpace.xs),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: 'End route',
+              icon: const Icon(Icons.close),
+              onPressed: controller.cancel,
             ),
-          ),
-        ],
-      ),
-      _ => Text('Head to ${nav.destination?.name ?? 'destination'}'),
-    };
-
-    final remaining = progress == null
-        ? null
-        : '${formatDistance(progress.remainingMeters, settings.speedUnit)} · ${formatDuration(progress.remainingSeconds)} · '
-              'ETA ${formatClock(DateTime.now().add(Duration(seconds: progress.remainingSeconds.round())), use24h: settings.use24h)}';
-
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 420),
-      child: Card(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Padding(
-          padding: const EdgeInsets.all(SdSpace.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DefaultTextStyle(style: t.titleMedium!, child: headline),
-              if (remaining != null && nav.phase != NavPhase.arrived) ...[
-                const SizedBox(height: SdSpace.xs),
-                Text(remaining, style: t.bodyMedium),
-              ],
-              const SizedBox(height: SdSpace.sm),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (nav.phase == NavPhase.routeReady && mapAvailable)
-                    FilledButton(
-                      onPressed: controller.start,
-                      child: const Text('Start'),
-                    ),
-                  if (nav.destination != null && nav.phase != NavPhase.arrived)
-                    IconButton(
-                      tooltip: 'Open in navigation app',
-                      icon: const Icon(Icons.open_in_new),
-                      onPressed: () => openExternalNavigation(
-                        context,
-                        ref,
-                        nav.destination!,
-                      ),
-                    ),
-                  if (nav.isGuiding)
-                    IconButton(
-                      tooltip: settings.voiceMuted
-                          ? 'Unmute voice'
-                          : 'Mute voice',
-                      icon: Icon(
-                        settings.voiceMuted
-                            ? Icons.volume_off
-                            : Icons.volume_up,
-                      ),
-                      onPressed: () => ref
-                          .read(settingsProvider.notifier)
-                          .update((s) => s.copyWith(voiceMuted: !s.voiceMuted)),
-                    ),
-                  IconButton(
-                    tooltip: 'End route',
-                    icon: const Icon(Icons.close),
-                    onPressed: controller.cancel,
-                  ),
-                ],
+            Flexible(child: summary),
+            const SizedBox(width: SdSpace.sm),
+            if (nav.phase == NavPhase.routeReady && mapAvailable)
+              FilledButton(
+                onPressed: controller.start,
+                child: const Text('Start'),
               ),
-            ],
-          ),
+            if (nav.destination != null && !arrived)
+              IconButton(
+                tooltip: 'Open in navigation app',
+                icon: const Icon(Icons.open_in_new),
+                onPressed: () =>
+                    openExternalNavigation(context, ref, nav.destination!),
+              ),
+            if (nav.isGuiding)
+              IconButton(
+                tooltip: settings.voiceMuted ? 'Unmute voice' : 'Mute voice',
+                icon: Icon(
+                  settings.voiceMuted ? Icons.volume_off : Icons.volume_up,
+                ),
+                onPressed: () => ref
+                    .read(settingsProvider.notifier)
+                    .update((s) => s.copyWith(voiceMuted: !s.voiceMuted)),
+              ),
+          ],
         ),
       ),
     );

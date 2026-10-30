@@ -90,6 +90,14 @@ class _SwiftDriveAppState extends ConsumerState<SwiftDriveApp> {
       themeMode: ref.watch(themeModeProvider),
       // A cross-fade between themes would briefly show mixed colours; switch instantly instead.
       themeAnimationDuration: Duration.zero,
+      // Performance mode turns every transition off through the same flag as the system setting
+      // (see SdMotion.of).
+      builder: (context, child) => reduceMotion
+          ? MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            )
+          : child!,
       home: onboarded ? const DashboardScreen() : const OnboardingScreen(),
       routes: {
         AppDrawerScreen.route: (_) => const AppDrawerScreen(),

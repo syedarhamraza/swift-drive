@@ -7,6 +7,7 @@ import 'package:swiftdrive/core/theme/theme_providers.dart';
 import 'package:swiftdrive/features/dashboard/domain/dashboard_layout.dart';
 import 'package:swiftdrive/features/diagnostics/data/device_repository.dart';
 import 'package:swiftdrive/features/notifications/data/notifications_repository.dart';
+import 'package:swiftdrive/features/weather/data/weather_repository.dart';
 
 void main() {
   group('capabilities and failures', () {
@@ -85,7 +86,7 @@ void main() {
         );
         expect(g.dockOnLeft, isTrue);
         expect(g.stacked, isFalse);
-        expect((g.mapFlex, g.sideFlex), (72, 28));
+        expect((g.mapFlex, g.sideFlex), (66, 34));
       },
     );
     test('small screens fall back to compact', () {
@@ -93,7 +94,7 @@ void main() {
         const Size(720, 450),
         DashboardLayout.mediaFocused,
       );
-      expect((g.mapFlex, g.sideFlex), (60, 40));
+      expect((g.mapFlex, g.sideFlex), (58, 42));
     });
     test('portrait stacks', () {
       expect(
@@ -102,6 +103,31 @@ void main() {
           DashboardLayout.balanced,
         ).stacked,
         isTrue,
+      );
+    });
+    test('wide head units give the pager its own column', () {
+      final g = computeDashboardGeometry(
+        const Size(1280, 800),
+        DashboardLayout.balanced,
+      );
+      expect(g.pagerBeside, isTrue);
+      expect(g.column, [DashboardWidget.notifications, DashboardWidget.media]);
+      expect(g.pager, [DashboardWidget.weather, DashboardWidget.speed]);
+    });
+    test('narrower screens share one column and page notifications', () {
+      for (final size in const [Size(933, 420), Size(683, 400)]) {
+        final g = computeDashboardGeometry(size, DashboardLayout.balanced);
+        expect(g.pagerBeside, isFalse, reason: '$size');
+        expect(g.column, [DashboardWidget.media]);
+        expect(g.pager, contains(DashboardWidget.notifications));
+      }
+      expect(
+        computeDashboardGeometry(
+          const Size(1280, 800),
+          DashboardLayout.mapFocused,
+        ).pagerBeside,
+        isFalse,
+        reason: 'a narrow side panel does not split',
       );
     });
     test('hidden speed and an unconfigured radio are left out', () {
@@ -179,6 +205,59 @@ void main() {
     test('temperature', () {
       expect(formatTemperature(21.6, TempUnit.celsius), '22°C');
       expect(formatTemperature(0, TempUnit.fahrenheit), '32°F');
+      expect(formatDegrees(21.6, TempUnit.celsius), '22°');
+      expect(formatDegrees(0, TempUnit.fahrenheit), '32°');
+    });
+  });
+
+  group('weather forecast', () {
+    test('parses hourly and daily data and skips incomplete entries', () {
+      const h = 1793365200; // a whole hour, unix seconds
+      final w = WeatherData.fromOpenMeteo({
+        'current': {
+          'temperature_2m': 20.3,
+          'weather_code': 0,
+          'is_day': 0,
+          'apparent_temperature': 19.5,
+        },
+        'hourly': {
+          'time': [h, h + 3600, h + 7200],
+          'temperature_2m': [20.8, null, 19.0],
+          'weather_code': [0, 1, 2],
+          'is_day': [1, 0, 0],
+        },
+        'daily': {
+          'time': [h, h + 86400],
+          'sunrise': [h - 40000, h + 46400],
+          'sunset': [h - 2000, h + 84400],
+          'temperature_2m_max': [25.8, 25.7],
+          'temperature_2m_min': [16.1, 15.2],
+          'weather_code': [0, 3],
+        },
+      }, DateTime(2026));
+      expect(w.feelsLikeC, 19.5);
+      expect(w.hourly.map((p) => p.tempC), [20.8, 19.0]);
+      expect(w.hourly.last.isDay, isFalse);
+      expect(w.daily.map((p) => (p.tempC, p.minC, p.code)), [
+        (25.8, 16.1, 0),
+        (25.7, 15.2, 3),
+      ]);
+      // Round trip through the cache keeps the forecast.
+      final cached = WeatherData.fromJson(w.toJson());
+      expect(cached.daily.last.minC, 15.2);
+      expect(cached.hourly, hasLength(2));
+    });
+
+    test('a cache written before forecasts existed still loads', () {
+      final w = WeatherData.fromJson({
+        't': 21.0,
+        'code': 1,
+        'isDay': true,
+        'fetchedAt': '2026-10-30T10:00:00.000',
+      });
+      expect(w.hourly, isEmpty);
+      expect(w.daily, isEmpty);
+      expect(w.feelsLikeC, isNull);
     });
   });
 }

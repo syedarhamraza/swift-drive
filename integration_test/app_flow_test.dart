@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -9,6 +10,7 @@ import 'package:swiftdrive/core/storage/settings.dart';
 import 'package:swiftdrive/core/storage/settings_providers.dart';
 import 'package:swiftdrive/features/apps/state/apps_providers.dart';
 import 'package:swiftdrive/features/apps/ui/app_drawer_screen.dart';
+import 'package:swiftdrive/features/dashboard/state/dashboard_providers.dart';
 import 'package:swiftdrive/features/dashboard/ui/dashboard_screen.dart';
 import 'package:swiftdrive/features/diagnostics/ui/diagnostics_screen.dart';
 import 'package:swiftdrive/features/onboarding/ui/onboarding_screen.dart';
@@ -52,7 +54,7 @@ void main() {
       // test to the background, so the native launch path is checked with a missing package instead.
       // Tooltip, not text: on small screens the dock shows icons only.
       await tester.tap(find.byTooltip('Apps'));
-      await waitFor(tester, find.byType(AppDrawerScreen));
+      await waitFor(tester, find.byType(AppDrawerPanel));
       await tester.enterText(find.byType(TextField), 'Settings');
       await waitFor(
         tester,
@@ -65,8 +67,15 @@ void main() {
           .read(appLauncherProvider)
           .launch('com.example.not.installed/.Main');
       expect(failure?.kind, FailureKind.activityMissing);
-      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
-      await waitFor(tester, find.byType(DashboardScreen));
+      // System Back closes the drawer panel and stays on the dashboard.
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        'flutter/navigation',
+        const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
+        (_) {},
+      );
+      await tester.pump(const Duration(seconds: 1));
+      expect(container.read(drawerOpenProvider), isFalse);
+      expect(find.byType(DashboardScreen), findsOneWidget);
 
       // Diagnostics runs the real capability detector.
       tester
@@ -76,8 +85,15 @@ void main() {
       await waitFor(tester, find.byType(CapabilityList));
       expect(find.textContaining('Profile: Generic Android'), findsOneWidget);
       expect(find.text('Diagnostics unavailable'), findsNothing);
-      tester.state<NavigatorState>(find.byType(Navigator).first).pop();
-      await waitFor(tester, find.byType(DashboardScreen));
+      // System Back leaves Diagnostics for the dashboard.
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        'flutter/navigation',
+        const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
+        (_) {},
+      );
+      await tester.pump(const Duration(seconds: 1));
+      expect(container.read(drawerOpenProvider), isFalse);
+      expect(find.byType(DashboardScreen), findsOneWidget);
 
       Brightness brightness() =>
           Theme.of(tester.element(find.byType(DashboardScreen))).brightness;

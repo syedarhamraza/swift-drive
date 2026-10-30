@@ -7,11 +7,14 @@ import '../../../core/theme/tokens.dart';
 import '../../../core/widgets/common.dart';
 import '../../apps/data/apps_repository.dart';
 import '../../apps/state/apps_providers.dart';
-import '../../apps/ui/app_drawer_screen.dart';
 import '../../apps/ui/app_picker.dart';
 import '../../bluetooth/domain/calling_adapter.dart';
+import '../../location/state/location_providers.dart';
 import '../../navigation/ui/destination_sheet.dart';
 import '../../settings/ui/settings_screen.dart';
+import '../domain/dashboard_layout.dart';
+import '../state/dashboard_providers.dart';
+import 'clock_card.dart';
 
 /// Parsed dock entry: `builtin:<id>` or `app:<package>/<activity>`.
 sealed class DockEntry {
@@ -57,65 +60,108 @@ class Dock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Settings is pinned at the end, outside the scrolling part, so it stays reachable even when the user
-    // removed it from the dock or added more entries than fit.
+    // Apps and Settings are pinned at the end, outside the scrolling part, so they stay reachable even
+    // when the user removed them from the dock or added more entries than fit.
+    const fixed = [BuiltinEntry('apps'), BuiltinEntry('settings')];
     final entries = ref
         .watch(settingsProvider.select((s) => s.dock))
         .map(DockEntry.parse)
         .nonNulls
-        .where((e) => !(e is BuiltinEntry && e.id == 'settings'))
+        .where(
+          (e) => !(e is BuiltinEntry && (e.id == 'settings' || e.id == 'apps')),
+        )
         .toList();
-    const padding = EdgeInsets.all(SdSpace.sm);
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      child: SafeArea(
-        right: !vertical,
-        top: vertical,
-        child: SizedBox(
-          width: vertical ? 88 : null,
-          height: vertical ? null : 80,
-          child: LayoutBuilder(
-            builder: (context, box) {
-              // Shrink buttons so the whole dock fits (e.g. 1024x600 at hdpi is only ~400 dp tall); below the
-              // minimum touch target the dock scrolls instead.
-              final main = vertical ? box.maxHeight : box.maxWidth;
-              final extent = ((main - 2 * SdSpace.sm) / (entries.length + 1))
-                  .clamp(SdSize.minTarget, 72.0);
-              final axis = vertical ? Axis.vertical : Axis.horizontal;
-              return Flex(
-                direction: axis,
-                children: [
-                  Expanded(
-                    child: ListView(
-                      scrollDirection: axis,
-                      padding: vertical
-                          ? padding.copyWith(bottom: 0)
-                          : padding.copyWith(right: 0),
-                      children: [
-                        for (final e in entries)
-                          _DockButton(
-                            entry: e,
-                            extent: extent,
-                            vertical: vertical,
-                          ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: vertical
-                        ? padding.copyWith(top: 0)
-                        : padding.copyWith(left: 0),
-                    child: _DockButton(
-                      entry: const BuiltinEntry('settings'),
-                      extent: extent,
-                      vertical: vertical,
-                    ),
-                  ),
-                ],
+    final drawerOpen = ref.watch(drawerOpenProvider);
+    final scheme = Theme.of(context).colorScheme;
+    final axis = vertical ? Axis.vertical : Axis.horizontal;
+
+    final rail = Material(
+      color: scheme.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(SdRadius.rail),
+      ),
+      child: LayoutBuilder(
+        builder: (context, box) {
+          // Shrink buttons so the whole rail fits (e.g. 1024x600 at hdpi is only ~400 dp tall); below the
+          // minimum touch target the middle part scrolls instead.
+          final main = vertical
+              ? box.maxHeight - _RailHeader.height
+              : box.maxWidth;
+          final extent =
+              ((main - 2 * SdSpace.sm) / (entries.length + fixed.length)).clamp(
+                SdSize.minTarget,
+                64.0,
               );
-            },
-          ),
+          Widget button(DockEntry e) => _DockButton(
+            entry: e,
+            extent: extent,
+            vertical: vertical,
+            active: drawerOpen && e is BuiltinEntry && e.id == 'apps',
+          );
+          return Flex(
+            direction: axis,
+            children: [
+              if (vertical) const _RailHeader(),
+              Expanded(
+                child: ListView(
+                  scrollDirection: axis,
+                  padding: EdgeInsets.zero,
+                  children: [for (final e in entries) button(e)],
+                ),
+              ),
+              for (final e in fixed) button(e),
+              const SizedBox(width: SdSpace.sm, height: SdSpace.sm),
+            ],
+          );
+        },
+      ),
+    );
+    return SafeArea(
+      right: !vertical,
+      top: vertical,
+      child: Padding(
+        padding: vertical
+            ? const EdgeInsets.fromLTRB(SdSpace.sm, SdSpace.sm, 0, SdSpace.sm)
+            : const EdgeInsets.fromLTRB(SdSpace.sm, 0, SdSpace.sm, SdSpace.sm),
+        child: SizedBox(
+          width: vertical ? railExtent - 2 * SdSpace.sm : null,
+          height: vertical ? null : 72,
+          child: rail,
         ),
+      ),
+    );
+  }
+}
+
+/// Small clock and GPS state at the top of the vertical rail.
+class _RailHeader extends ConsumerWidget {
+  const _RailHeader();
+
+  static const height = 76.0;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasFix = ref.watch(locationProvider.select((s) => s.fix != null));
+    return SizedBox(
+      height: height,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: SdSpace.sm),
+            child: ClockText(compact: true),
+          ),
+          const SizedBox(height: SdSpace.xs),
+          Icon(
+            hasFix ? Icons.gps_fixed : Icons.gps_not_fixed,
+            size: 16,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            semanticLabel: hasFix
+                ? 'GPS position available'
+                : 'No GPS position',
+          ),
+        ],
       ),
     );
   }
@@ -126,16 +172,22 @@ class _DockButton extends ConsumerWidget {
     required this.entry,
     required this.extent,
     required this.vertical,
+    this.active = false,
   });
 
   final DockEntry entry;
 
-  /// Size along the dock; labels are dropped (tooltip remains) when there is no room for them.
+  /// Size along the rail; the circle shrinks with it (the tooltip carries the label).
   final double extent;
   final bool vertical;
 
+  /// Highlighted, e.g. Apps while the drawer is open.
+  final bool active;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final circle = (extent - SdSpace.sm).clamp(44.0, 56.0);
     final Widget icon;
     final String label;
     VoidCallback onTap;
@@ -143,7 +195,11 @@ class _DockButton extends ConsumerWidget {
       case BuiltinEntry(:final id):
         final (l, i) = builtinInfo(id);
         label = l;
-        icon = Icon(i, size: 30);
+        icon = Icon(
+          i,
+          size: circle * 0.5,
+          color: active ? scheme.onPrimaryContainer : scheme.onSurface,
+        );
         onTap = () => _builtinAction(context, ref, id);
       case AppEntry(:final appId):
         final apps = ref.watch(installedAppsProvider).value;
@@ -151,12 +207,12 @@ class _DockButton extends ConsumerWidget {
         final missing = apps != null && app == null;
         label = app?.label ?? (missing ? 'Missing app' : '…');
         icon = missing
-            ? const Icon(
+            ? Icon(
                 Icons.warning_amber_rounded,
-                size: 30,
+                size: circle * 0.5,
                 color: SdColors.warning,
               )
-            : AppIconImage(app?.icon, size: 36);
+            : AppIconImage(app?.icon, size: circle - 6);
         onTap = missing
             ? () => _replaceMissing(context, ref, appId)
             : () async {
@@ -169,28 +225,34 @@ class _DockButton extends ConsumerWidget {
                 }
               };
     }
-    return Tooltip(
-      message: label,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(SdRadius.button),
-        onTap: onTap,
-        child: SizedBox(
-          width: vertical ? 72 : extent,
-          height: vertical ? extent : 72,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              icon,
-              if (extent >= 64) ...[
-                const SizedBox(height: 2),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.labelSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ],
+    final background = active
+        ? scheme.primaryContainer
+        : entry is AppEntry
+        ? Colors.transparent
+        : scheme.surfaceContainerHighest;
+    return SizedBox(
+      width: vertical ? railExtent - 2 * SdSpace.sm : extent,
+      height: vertical ? extent : 72,
+      child: Center(
+        child: Tooltip(
+          message: label,
+          child: AnimatedContainer(
+            duration: SdMotion.of(context, SdMotion.medium),
+            curve: SdMotion.curve,
+            width: circle,
+            height: circle,
+            decoration: ShapeDecoration(
+              shape: const CircleBorder(),
+              color: background,
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: onTap,
+                child: Center(child: icon),
+              ),
+            ),
           ),
         ),
       ),
@@ -205,6 +267,7 @@ class _DockButton extends ConsumerWidget {
     final nav = Navigator.of(context);
     switch (id) {
       case 'home':
+        ref.read(drawerOpenProvider.notifier).set(false);
         nav.popUntil((r) => r.isFirst);
       case 'maps':
         if (ref.read(settingsProvider).mapEnabled) {
@@ -220,7 +283,7 @@ class _DockButton extends ConsumerWidget {
       case 'radio':
         await launchRole(context, ref, FactoryRole.radio);
       case 'apps':
-        await nav.pushNamed(AppDrawerScreen.route);
+        ref.read(drawerOpenProvider.notifier).toggle();
       case 'settings':
         await nav.pushNamed(SettingsScreen.route);
     }

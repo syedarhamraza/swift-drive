@@ -17,16 +17,16 @@ ThemeData buildTheme(
   final textSecondary = dark
       ? SdColors.darkTextSecondary
       : SdColors.lightTextSecondary;
-  // In light mode the pastel accents lack contrast on white; darken them for foreground use.
-  final primary = dark ? accent : Color.lerp(accent, Colors.black, 0.45)!;
-
-  final scheme = ColorScheme(
+  // Tonal roles (pastel pills and containers) come from the accent; surfaces stay our near-neutral palette
+  // so the dashboard is dark enough for night driving.
+  final seeded = ColorScheme.fromSeed(
+    seedColor: accent,
     brightness: brightness,
-    primary: primary,
-    onPrimary: dark ? SdColors.darkBackground : Colors.white,
-    // Tonal buttons use the secondary container: keep them neutral rather than green.
-    secondary: primary,
-    onSecondary: dark ? SdColors.darkBackground : Colors.white,
+    dynamicSchemeVariant: DynamicSchemeVariant.tonalSpot,
+  );
+
+  final scheme = seeded.copyWith(
+    // Tonal buttons use the secondary container: keep them neutral, like secondary actions in a car UI.
     secondaryContainer: elevated,
     onSecondaryContainer: textPrimary,
     error: SdColors.danger,
@@ -41,8 +41,6 @@ ThemeData buildTheme(
     surfaceContainerLowest: background,
     outline: textSecondary.withValues(alpha: 0.4),
     outlineVariant: textSecondary.withValues(alpha: 0.2),
-    tertiary: SdColors.warning,
-    onTertiary: SdColors.darkBackground,
   );
 
   final base = ThemeData(
@@ -87,16 +85,35 @@ ThemeData buildTheme(
       ),
     ),
     dialogTheme: DialogThemeData(backgroundColor: surface),
-    bottomSheetTheme: BottomSheetThemeData(backgroundColor: surface),
-    listTileTheme: const ListTileThemeData(
+    listTileTheme: ListTileThemeData(
       minVerticalPadding: 12,
       minTileHeight: SdSize.driveTarget,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(SdRadius.button),
+      ),
     ),
+    // Pill buttons everywhere (Material 3's default stadium shape), at least one touch target tall.
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         minimumSize: const Size(SdSize.minTarget, SdSize.minTarget),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(SdRadius.button),
+        padding: const EdgeInsets.symmetric(horizontal: SdSpace.xl),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size(SdSize.minTarget, SdSize.minTarget),
+      ),
+    ),
+    snackBarTheme: const SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: StadiumBorder(),
+    ),
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: surface,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(SdRadius.card),
         ),
       ),
     ),

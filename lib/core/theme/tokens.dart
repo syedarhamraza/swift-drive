@@ -20,6 +20,12 @@ abstract final class SdColors {
   static const warning = Color(0xFFF2BF69);
   static const danger = Color(0xFFFF8A80);
 
+  /// Maneuver card: a fixed, high-contrast green so turn guidance reads the same in every theme.
+  static const navGreen = Color(0xFF1F6E4A);
+
+  /// Remaining-time text in the ETA pill.
+  static const etaGreen = Color(0xFF7BE0A4);
+
   /// User-selectable accents. The first one is the default.
   static const accents = <Color>[
     Color(0xFF82B4FF), // Sky
@@ -39,12 +45,26 @@ abstract final class SdSpace {
 }
 
 abstract final class SdRadius {
-  static const card = 20.0;
-  static const button = 16.0;
+  static const card = 28.0;
+  static const rail = 32.0;
+  static const button = 20.0;
 }
 
 abstract final class SdSize {
   /// Minimum touch target. Frequent driving actions use [driveTarget].
   static const minTarget = 48.0;
   static const driveTarget = 64.0;
+}
+
+/// Motion is event-driven only: short transitions when something changes, nothing that loops.
+abstract final class SdMotion {
+  static const short = Duration(milliseconds: 150);
+  static const medium = Duration(milliseconds: 250);
+  static const long = Duration(milliseconds: 350);
+  static const curve = Curves.easeOutCubic;
+  static const exitCurve = Curves.easeInCubic;
+
+  /// [d], or zero when animations are off (performance mode or the system "remove animations" setting).
+  static Duration of(BuildContext context, Duration d) =>
+      MediaQuery.disableAnimationsOf(context) ? Duration.zero : d;
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:swiftdrive/core/app_state.dart';
@@ -6,6 +7,7 @@ import 'package:swiftdrive/core/storage/settings.dart';
 import 'package:swiftdrive/core/storage/settings_providers.dart';
 import 'package:swiftdrive/features/apps/data/apps_repository.dart';
 import 'package:swiftdrive/features/apps/ui/app_drawer_screen.dart';
+import 'package:swiftdrive/features/dashboard/state/dashboard_providers.dart';
 import 'package:swiftdrive/features/dashboard/ui/dashboard_screen.dart';
 import 'package:swiftdrive/features/diagnostics/ui/diagnostics_screen.dart';
 import 'package:swiftdrive/features/location/data/location_repository.dart';
@@ -23,6 +25,7 @@ import 'package:swiftdrive/features/weather/ui/weather_card.dart';
 import '../fakes/fakes.dart';
 
 const headUnitSizes = [
+  Size(933, 420), // the test phone in landscape
   Size(1024, 600),
   Size(1280, 720),
   Size(1280, 800),
@@ -60,9 +63,9 @@ void main() {
           expect(find.byType(DashboardScreen), findsOneWidget);
           expect(find.text('Nothing playing'), findsOneWidget);
           expect(
-            find.text('Settings'),
+            find.byTooltip('Settings').hitTestable(),
             findsOneWidget,
-            reason: 'Settings stays reachable from the dock',
+            reason: 'Settings stays reachable from the rail',
           );
           // Map disabled in tests → fallback with an external-navigation option.
           expect(tester.takeException(), isNull);
@@ -274,21 +277,108 @@ void main() {
         AppInfo(packageName: 'com.radio', activityName: 'R', label: 'FM Radio'),
       ];
       await pumpApp(tester, c);
-      await tester.tap(find.text('Apps'));
+      // Media access arrives as the first stream event; until then the card shows a spinner.
+      fakes.media.snapshots$.add(noMedia);
+      await tester.pump();
+      await tester.tap(find.byTooltip('Apps'));
       await tester.pumpAndSettle();
-      expect(find.byType(AppDrawerScreen), findsOneWidget);
+      expect(find.byType(AppDrawerPanel), findsOneWidget);
       await tester.enterText(find.byType(TextField), 'radio');
       await tester.pump();
       expect(find.text('Music Player'), findsNothing);
       await tester.tap(find.text('FM Radio'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(fakes.apps.launched, ['com.radio/R']);
+      expect(
+        find.byType(AppDrawerPanel),
+        findsNothing,
+        reason: 'a successful launch closes the drawer',
+      );
+      await tearDownScreen(tester, c);
+    });
+
+    testWidgets('Back closes the drawer before leaving the dashboard', (
+      tester,
+    ) async {
+      await pumpApp(tester, c);
+      // Media access arrives as the first stream event; until then the card shows a spinner.
+      fakes.media.snapshots$.add(noMedia);
+      await tester.pump();
+      await tester.tap(find.byTooltip('Apps'));
+      await tester.pumpAndSettle();
+      expect(c.read(drawerOpenProvider), isTrue);
+      await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+        'flutter/navigation',
+        const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
+        (_) {},
+      );
+      await tester.pumpAndSettle();
+      expect(c.read(drawerOpenProvider), isFalse);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+      await tearDownScreen(tester, c);
+    });
+
+    testWidgets('pager dots switch from weather to speed', (tester) async {
+      await pumpApp(tester, c, size: const Size(1280, 800));
+      // Media access arrives as the first stream event; until then the card shows a spinner.
+      fakes.media.snapshots$.add(noMedia);
+      await tester.pump();
+      final speed = find.text('GPS speed (informational)').hitTestable();
+      expect(speed, findsNothing);
+      await tester.tap(find.byTooltip('Speed'));
+      await tester.pumpAndSettle();
+      expect(speed, findsOneWidget);
+      await tearDownScreen(tester, c);
+    });
+
+    testWidgets('notification card reads the newest message aloud', (
+      tester,
+    ) async {
+      await pumpApp(tester, c, size: const Size(1280, 800));
+      // Media access arrives as the first stream event; until then the card shows a spinner.
+      fakes.media.snapshots$.add(noMedia);
+      await tester.pump();
+      fakes.notifications.items$.add([
+        NotificationItem(
+          key: 'k',
+          packageName: 'p',
+          appLabel: 'Chat',
+          title: 'Sam',
+          text: 'Running late',
+          postTime: DateTime(2026),
+          clearable: true,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.text('Sam'), findsOneWidget);
+      await tester.tap(find.byTooltip('Read aloud'));
+      await tester.pump();
+      expect(fakes.voice.spoken, ['Chat. Sam. Running late']);
+      await tearDownScreen(tester, c);
+    });
+
+    testWidgets('performance mode turns transitions off', (tester) async {
+      c = await makeContainer(
+        fakes,
+        settings: const LauncherSettings(
+          onboardingDone: true,
+          mapEnabled: false,
+          performanceMode: true,
+        ),
+      );
+      await pumpApp(tester, c);
+      expect(
+        MediaQuery.disableAnimationsOf(
+          tester.element(find.byType(DashboardScreen)),
+        ),
+        isTrue,
+      );
       await tearDownScreen(tester, c);
     });
 
     testWidgets('settings toggles persist', (tester) async {
       await pumpApp(tester, c, size: const Size(1280, 800));
-      await tester.tap(find.text('Settings'));
+      await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       expect(find.byType(SettingsScreen), findsOneWidget);
       await tester.tap(find.text('Use 24-hour clock'));
