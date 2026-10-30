@@ -44,11 +44,10 @@ class WeatherPanel extends ConsumerWidget {
       data: theme,
       child: SdCard(
         gradient: _sky(data),
-        // Extra right padding keeps content clear of the pager dots.
         padding: const EdgeInsets.fromLTRB(
           SdSpace.lg,
           SdSpace.md,
-          36,
+          SdSpace.lg,
           SdSpace.sm,
         ),
         child: LayoutBuilder(

@@ -65,8 +65,6 @@ class SpeedCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              // Clear of the pager dots.
-              const SizedBox(width: 28),
             ],
           ),
           const SizedBox(height: SdSpace.xs),

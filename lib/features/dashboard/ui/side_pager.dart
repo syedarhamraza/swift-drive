@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/common.dart';
 
 /// One card at a time, swiped vertically; dots on the right edge show and pick the page.
 class SidePager extends StatefulWidget {
@@ -44,7 +45,11 @@ class _SidePagerState extends State<SidePager> {
           controller: _controller,
           scrollDirection: Axis.vertical,
           onPageChanged: (i) => setState(() => _page = i),
-          children: [for (final p in widget.pages) RepaintBoundary(child: p)],
+          // Cards on a page keep their content clear of the dots.
+          children: [
+            for (final p in widget.pages)
+              CardEndInset(width: 20, child: RepaintBoundary(child: p)),
+          ],
         ),
         Positioned(
           right: SdSpace.xs,

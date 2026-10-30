@@ -34,10 +34,27 @@ class SdCard extends StatelessWidget {
       decoration: BoxDecoration(gradient: gradient),
       child: InkWell(
         onTap: onTap,
-        child: Padding(padding: padding, child: child),
+        child: Padding(
+          padding: padding + EdgeInsets.only(right: CardEndInset.of(context)),
+          child: child,
+        ),
       ),
     ),
   );
+}
+
+/// Extra right padding for [SdCard]s below it, where something overlays the cards' right edge (the
+/// pager dots).
+class CardEndInset extends InheritedWidget {
+  const CardEndInset({super.key, required this.width, required super.child});
+
+  final double width;
+
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<CardEndInset>()?.width ?? 0;
+
+  @override
+  bool updateShouldNotify(CardEndInset old) => width != old.width;
 }
 
 /// Light text and icons for content on artwork or a dark gradient, whatever the app theme is.

@@ -190,15 +190,17 @@ class _SidePanel extends StatelessWidget {
 
   final DashboardGeometry geometry;
 
-  static Widget _card(DashboardWidget w) => RepaintBoundary(
-    child: switch (w) {
-      DashboardWidget.notifications => const NotificationsCard(),
-      DashboardWidget.media => const MediaCard(),
-      DashboardWidget.radio => const RadioCard(),
-      DashboardWidget.weather => const WeatherPanel(),
-      DashboardWidget.speed => const SpeedCard(),
-    },
-  );
+  /// [page]: shown as a pager page, which the card fills.
+  static Widget _card(DashboardWidget w, {bool page = false}) =>
+      RepaintBoundary(
+        child: switch (w) {
+          DashboardWidget.notifications => NotificationsCard(expand: page),
+          DashboardWidget.media => const MediaCard(),
+          DashboardWidget.radio => const RadioCard(),
+          DashboardWidget.weather => const WeatherPanel(),
+          DashboardWidget.speed => const SpeedCard(),
+        },
+      );
 
   static String _label(DashboardWidget w) => switch (w) {
     DashboardWidget.notifications => 'Notifications',
@@ -214,7 +216,7 @@ class _SidePanel extends StatelessWidget {
     final pager = g.pager.isEmpty
         ? null
         : SidePager(
-            pages: [for (final w in g.pager) _card(w)],
+            pages: [for (final w in g.pager) _card(w, page: true)],
             labels: [for (final w in g.pager) _label(w)],
           );
     final column = Column(
