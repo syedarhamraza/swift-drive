@@ -241,14 +241,18 @@ class _NowPlaying extends ConsumerWidget {
                           key: ValueKey((session.title, session.artist)),
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Some players publish a session without track info: name the app instead
+                            // of showing a placeholder.
                             Text(
-                              session.title ?? 'Unknown title',
+                              session.title ?? session.appLabel,
                               style: t.titleLarge,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             Text(
-                              session.artist ?? session.appLabel,
+                              session.title == null
+                                  ? (session.isPlaying ? 'Playing' : 'Paused')
+                                  : session.artist ?? session.appLabel,
                               style: t.bodyMedium?.copyWith(
                                 color: Colors.white70,
                               ),

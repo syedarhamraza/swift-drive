@@ -88,7 +88,7 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester, c, size: const Size(683, 400));
-      for (final label in ['Home', 'Apps', 'Settings']) {
+      for (final label in ['Maps', 'Apps', 'Settings']) {
         expect(
           find.byTooltip(label).hitTestable(),
           findsOneWidget,

@@ -23,7 +23,7 @@ class WeatherPanel extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     // A faint accent tint sets the weather page apart from the neutral cards around it.
     final tint = Color.alphaBlend(
-      scheme.primaryContainer.withValues(alpha: 0.55),
+      scheme.primaryContainer.withValues(alpha: 0.4),
       scheme.surface,
     );
 
@@ -46,30 +46,34 @@ class WeatherPanel extends ConsumerWidget {
     return Card(
       color: tint,
       child: Padding(
-        // Extra right padding leaves room for the pager dots.
+        // Extra right padding keeps content clear of the pager dots.
         padding: const EdgeInsets.fromLTRB(
           SdSpace.lg,
           SdSpace.md,
-          SdSpace.xl,
+          36,
           SdSpace.sm,
         ),
         child: LayoutBuilder(
           builder: (context, box) {
-            final showHours = hours.length > 1 && box.maxHeight >= 230;
-            final showDays = days.isNotEmpty && box.maxHeight >= 380;
+            // Short cards (a phone in landscape) trade the place line for the hourly row.
+            final short = box.maxHeight < 190;
+            final showHours = hours.length > 1 && box.maxHeight >= 140;
+            final showDays = days.isNotEmpty && box.maxHeight >= 330;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  data.locationName ?? DateFormat.MMMEd().format(now),
-                  style: t.titleSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: SdSpace.xs),
+                if (!short) ...[
+                  Text(
+                    data.locationName ?? DateFormat.MMMEd().format(now),
+                    style: t.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: SdSpace.xs),
+                ],
                 _Now(data: data, today: today, label: label, icon: icon),
                 if (showHours) ...[
-                  const SizedBox(height: SdSpace.md),
+                  SizedBox(height: short ? SdSpace.sm : SdSpace.md),
                   _Hours(hours: hours, use24h: use24h),
                 ],
                 if (showDays) ...[
@@ -137,16 +141,18 @@ class _Now extends ConsumerWidget {
                   ),
                 ],
               ),
-              if (data.feelsLikeC != null)
-                Text(
-                  'Feels like ${formatDegrees(data.feelsLikeC!, unit)}',
-                  style: t.bodyMedium,
-                ),
-              if (today != null && low != null)
-                Text(
-                  '${formatDegrees(today!.tempC, unit)} · ${formatDegrees(low, unit)}',
-                  style: t.bodyMedium,
-                ),
+              // One line, so the hourly row still fits on short screens.
+              Text(
+                [
+                  if (data.feelsLikeC != null)
+                    'Feels like ${formatDegrees(data.feelsLikeC!, unit)}',
+                  if (today != null && low != null)
+                    '${formatDegrees(today!.tempC, unit)} / ${formatDegrees(low, unit)}',
+                ].join(' · '),
+                style: t.bodyMedium,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),

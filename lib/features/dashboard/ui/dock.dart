@@ -60,15 +60,17 @@ class Dock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Apps and Settings are pinned at the end, outside the scrolling part, so they stay reachable even
-    // when the user removed them from the dock or added more entries than fit.
+    // Apps and Settings are pinned at the end so they stay reachable even when the user removed them from
+    // the dock or added more entries than fit. Home is left out: the rail only exists on the home screen.
     const fixed = [BuiltinEntry('apps'), BuiltinEntry('settings')];
     final entries = ref
         .watch(settingsProvider.select((s) => s.dock))
         .map(DockEntry.parse)
         .nonNulls
         .where(
-          (e) => !(e is BuiltinEntry && (e.id == 'settings' || e.id == 'apps')),
+          (e) =>
+              !(e is BuiltinEntry &&
+                  (e.id == 'settings' || e.id == 'apps' || e.id == 'home')),
         )
         .toList();
     final drawerOpen = ref.watch(drawerOpenProvider);
@@ -83,16 +85,18 @@ class Dock extends ConsumerWidget {
       ),
       child: LayoutBuilder(
         builder: (context, box) {
-          // Shrink buttons so the whole rail fits (e.g. 1024x600 at hdpi is only ~400 dp tall); below the
-          // minimum touch target the middle part scrolls instead.
-          final main = vertical
-              ? box.maxHeight - _RailHeader.height
-              : box.maxWidth;
-          final extent =
-              ((main - 2 * SdSpace.sm) / (entries.length + fixed.length)).clamp(
-                SdSize.minTarget,
-                64.0,
-              );
+          // Buttons shrink so the rail fits (e.g. 1024x600 at hdpi is only ~400 dp tall). If even minimum
+          // touch targets do not fit, the last pinned entries are left out (they stay in the drawer)
+          // rather than showing a half-cut icon.
+          final main =
+              (vertical ? box.maxHeight - _RailHeader.height : box.maxWidth) -
+              SdSpace.sm;
+          final room = (main / SdSize.minTarget).floor() - fixed.length;
+          final shown = entries.take(room.clamp(0, entries.length)).toList();
+          final extent = (main / (shown.length + fixed.length)).clamp(
+            SdSize.minTarget,
+            64.0,
+          );
           Widget button(DockEntry e) => _DockButton(
             entry: e,
             extent: extent,
@@ -103,13 +107,8 @@ class Dock extends ConsumerWidget {
             direction: axis,
             children: [
               if (vertical) const _RailHeader(),
-              Expanded(
-                child: ListView(
-                  scrollDirection: axis,
-                  padding: EdgeInsets.zero,
-                  children: [for (final e in entries) button(e)],
-                ),
-              ),
+              for (final e in shown) button(e),
+              const Spacer(),
               for (final e in fixed) button(e),
               const SizedBox(width: SdSpace.sm, height: SdSpace.sm),
             ],
@@ -191,15 +190,33 @@ class _DockButton extends ConsumerWidget {
     final Widget icon;
     final String label;
     VoidCallback onTap;
+    var appIcon = entry is AppEntry;
     switch (entry) {
       case BuiltinEntry(:final id):
         final (l, i) = builtinInfo(id);
         label = l;
-        icon = Icon(
-          i,
-          size: circle * 0.5,
-          color: active ? scheme.onPrimaryContainer : scheme.onSurface,
-        );
+        // Music, Phone and Radio open the user's chosen app, so they show that app's own icon.
+        final role = switch (id) {
+          'music' => FactoryRole.music,
+          'phone' => FactoryRole.phone,
+          'radio' => FactoryRole.radio,
+          _ => null,
+        };
+        final chosen = role == null
+            ? null
+            : ref.watch(settingsProvider.select((s) => s.shortcuts[role]));
+        final apps = ref.watch(installedAppsProvider).value;
+        final app = chosen == null || apps == null
+            ? null
+            : findApp(apps, chosen);
+        appIcon = app?.icon != null;
+        icon = appIcon
+            ? AppIconImage(app!.icon, size: circle - 6)
+            : Icon(
+                i,
+                size: circle * 0.5,
+                color: active ? scheme.onPrimaryContainer : scheme.onSurface,
+              );
         onTap = () => _builtinAction(context, ref, id);
       case AppEntry(:final appId):
         final apps = ref.watch(installedAppsProvider).value;
@@ -227,7 +244,7 @@ class _DockButton extends ConsumerWidget {
     }
     final background = active
         ? scheme.primaryContainer
-        : entry is AppEntry
+        : appIcon
         ? Colors.transparent
         : scheme.surfaceContainerHighest;
     return SizedBox(

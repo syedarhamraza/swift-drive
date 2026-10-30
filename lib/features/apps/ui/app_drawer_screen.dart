@@ -146,8 +146,9 @@ class _AppDrawerPanelState extends ConsumerState<AppDrawerPanel> {
           showHidden: _showHidden,
         );
         // The way back to the factory launcher comes first, unless the user is searching.
-        final factory = _query.isEmpty ? homes : const <HomeApp>[];
-        if (visible.isEmpty && factory.isEmpty) {
+        // One Exit tile leads back to the factory launcher, unless the user is searching.
+        final exit = _query.isEmpty && homes.isNotEmpty ? 1 : 0;
+        if (visible.isEmpty && exit == 0) {
           return const Center(
             child: StatusMessage(icon: Icons.apps, title: 'No apps found'),
           );
@@ -187,10 +188,10 @@ class _AppDrawerPanelState extends ConsumerState<AppDrawerPanel> {
                   crossAxisSpacing: SdSpace.xs,
                   mainAxisSpacing: SdSpace.xs,
                 ),
-                itemCount: factory.length + visible.length,
+                itemCount: exit + visible.length,
                 itemBuilder: (context, i) {
-                  if (i < factory.length) return _FactoryTile(home: factory[i]);
-                  final app = visible[i - factory.length];
+                  if (i < exit) return _ExitTile(homes: homes);
+                  final app = visible[i - exit];
                   return _AppTile(
                     app: app,
                     favorite: favorites.contains(app.id),
@@ -222,17 +223,28 @@ class _AppDrawerPanelState extends ConsumerState<AppDrawerPanel> {
 }
 
 /// Opens the device's original launcher (the spec's guaranteed way back).
-class _FactoryTile extends ConsumerWidget {
-  const _FactoryTile({required this.home});
+class _ExitTile extends ConsumerWidget {
+  const _ExitTile({required this.homes});
 
-  final HomeApp home;
+  /// Other launchers on the device; some phones register several (battery saver, simple mode).
+  final List<HomeApp> homes;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    Future<void> open(HomeApp home) async {
+      try {
+        await ref.read(launcherRepositoryProvider).launchHome(home);
+      } on PlatformFailure catch (f) {
+        if (context.mounted) showFailure(context, f, what: home.label);
+      }
+    }
+
     return _Tile(
-      label: 'Exit to ${home.label}',
-      tooltip: 'Open ${home.label} (factory launcher)',
+      label: 'Exit',
+      tooltip: homes.length == 1
+          ? 'Open ${homes.single.label} (factory launcher)'
+          : 'Open the factory launcher',
       icon: CircleAvatar(
         radius: 28,
         backgroundColor: scheme.primaryContainer,
@@ -242,12 +254,32 @@ class _FactoryTile extends ConsumerWidget {
           color: scheme.onPrimaryContainer,
         ),
       ),
-      onTap: () async {
-        try {
-          await ref.read(launcherRepositoryProvider).launchHome(home);
-        } on PlatformFailure catch (f) {
-          if (context.mounted) showFailure(context, f, what: home.label);
+      onTap: () {
+        if (homes.length == 1) {
+          open(homes.single);
+          return;
         }
+        showModalBottomSheet<void>(
+          context: context,
+          builder: (sheet) => SafeArea(
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                const ListTile(title: Text('Open launcher')),
+                for (final h in homes)
+                  ListTile(
+                    leading: const Icon(Icons.exit_to_app_rounded),
+                    title: Text(h.label),
+                    subtitle: Text(h.packageName),
+                    onTap: () {
+                      Navigator.pop(sheet);
+                      open(h);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
