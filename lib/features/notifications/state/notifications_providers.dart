@@ -31,6 +31,10 @@ class NotificationsController extends Notifier<NotificationsState> {
       return NotificationsState(access: stateOrNull?.access);
     }
     final repo = ref.watch(notificationsRepositoryProvider);
+    // Changing it re-subscribes, so the native side never extracts private content it should not.
+    final showPrivate = ref.watch(
+      settingsProvider.select((s) => s.showPrivateNotifications),
+    );
     var disposed = false;
     ref.onDispose(() => disposed = true);
     repo.hasAccess().then(
@@ -41,10 +45,13 @@ class NotificationsController extends Notifier<NotificationsState> {
           items: access ? state.items : const [],
         );
         if (!access) return;
-        final sub = repo.notifications().listen(
-          (items) => state = NotificationsState(access: true, items: items),
-          onError: (Object e) => AppLog.e('notifications', 'stream failed: $e'),
-        );
+        final sub = repo
+            .notifications(showPrivate: showPrivate)
+            .listen(
+              (items) => state = NotificationsState(access: true, items: items),
+              onError: (Object e) =>
+                  AppLog.e('notifications', 'stream failed: $e'),
+            );
         ref.onDispose(sub.cancel);
       },
       onError: (Object e) =>

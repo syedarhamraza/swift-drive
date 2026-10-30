@@ -13,6 +13,7 @@ class NotificationItem {
     this.text,
     this.category,
     this.importance,
+    this.hidden = false,
   });
 
   factory NotificationItem.fromMap(Map<Object?, Object?> m) => NotificationItem(
@@ -27,6 +28,7 @@ class NotificationItem {
     clearable: m['clearable'] as bool? ?? false,
     category: m['category'] as String?,
     importance: m['importance'] as int?,
+    hidden: m['hidden'] as bool? ?? false,
   );
 
   final String key;
@@ -38,6 +40,13 @@ class NotificationItem {
   final bool clearable;
   final String? category;
   final int? importance;
+
+  /// The app marked it private and the user has not chosen to show private content.
+  final bool hidden;
+
+  /// What to show and read: the text, or a note that the app hid it.
+  String? get body =>
+      text ?? (hidden ? 'Private notification, content hidden' : null);
 }
 
 /// Android NotificationManager.IMPORTANCE_DEFAULT.
@@ -60,7 +69,9 @@ bool isEssentialNotification(NotificationItem n) =>
 
 abstract interface class NotificationsRepository {
   Future<bool> hasAccess();
-  Stream<List<NotificationItem>> notifications();
+
+  /// [showPrivate] includes the content of notifications their app marked private.
+  Stream<List<NotificationItem>> notifications({bool showPrivate = false});
   Future<void> dismiss(String key);
 }
 
@@ -75,13 +86,15 @@ class ChannelNotificationsRepository implements NotificationsRepository {
   );
 
   @override
-  Stream<List<NotificationItem>> notifications() =>
-      _events.receiveBroadcastStream().map(
-        (e) => (e as List)
-            .cast<Map<Object?, Object?>>()
-            .map(NotificationItem.fromMap)
-            .toList(),
-      );
+  Stream<List<NotificationItem>> notifications({bool showPrivate = false}) =>
+      _events
+          .receiveBroadcastStream({'showPrivate': showPrivate})
+          .map(
+            (e) => (e as List)
+                .cast<Map<Object?, Object?>>()
+                .map(NotificationItem.fromMap)
+                .toList(),
+          );
 
   @override
   Future<void> dismiss(String key) => guardPlatform(

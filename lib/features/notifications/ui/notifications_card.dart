@@ -131,7 +131,7 @@ class _Latest extends ConsumerWidget {
       // Spoken only on request and never stored.
       await ref
           .read(voiceGuidanceProvider)
-          .say([item.appLabel, ?item.title, ?item.text].join('. '));
+          .say([item.appLabel, ?item.title, ?item.body].join('. '));
     }
 
     final Widget? second = item.clearable
@@ -237,9 +237,9 @@ class _Latest extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-              if (item.text != null)
+              if (item.body != null)
                 Text(
-                  item.text!,
+                  item.body!,
                   style: (compact ? t.bodyMedium : t.bodyLarge)?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -320,7 +320,7 @@ class NotificationTile extends ConsumerWidget {
         [
           item.appLabel,
           formatAge(item.postTime, DateTime.now()),
-          ?item.text,
+          ?item.body,
         ].join(' · '),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,

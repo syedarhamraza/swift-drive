@@ -139,10 +139,18 @@ class FakeNotifications implements NotificationsRepository {
   bool access;
   final items$ = StreamController<List<NotificationItem>>.broadcast();
 
+  /// What the controller last asked for.
+  bool? showPrivate;
+
   @override
   Future<bool> hasAccess() async => access;
+
   @override
-  Stream<List<NotificationItem>> notifications() => items$.stream;
+  Stream<List<NotificationItem>> notifications({bool showPrivate = false}) {
+    this.showPrivate = showPrivate;
+    return items$.stream;
+  }
+
   @override
   Future<void> dismiss(String key) async {}
 }

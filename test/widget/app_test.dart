@@ -391,6 +391,51 @@ void main() {
       await tearDownScreen(tester, c);
     });
 
+    testWidgets('a private notification says its content is hidden', (
+      tester,
+    ) async {
+      await pumpApp(tester, c, size: const Size(1280, 800));
+      fakes.media.snapshots$.add(noMedia);
+      await tester.pump();
+      expect(fakes.notifications.showPrivate, isFalse);
+      fakes.notifications.items$.add([
+        NotificationItem(
+          key: 'k',
+          packageName: 'p',
+          appLabel: 'LinkedIn',
+          postTime: DateTime(2026),
+          clearable: true,
+          hidden: true,
+        ),
+      ]);
+      await tester.pumpAndSettle();
+      expect(find.text('Private notification, content hidden'), findsOneWidget);
+      await tester.tap(find.byTooltip('Read aloud'));
+      await tester.pump();
+      expect(fakes.voice.spoken, [
+        'LinkedIn. Private notification, content hidden',
+      ]);
+      await tearDownScreen(tester, c);
+    });
+
+    testWidgets('"Show private content" asks the listener for it', (
+      tester,
+    ) async {
+      c = await makeContainer(
+        fakes,
+        settings: const LauncherSettings(
+          onboardingDone: true,
+          mapEnabled: false,
+          showPrivateNotifications: true,
+        ),
+      );
+      await pumpApp(tester, c, size: const Size(1280, 800));
+      fakes.media.snapshots$.add(noMedia);
+      await tester.pump();
+      expect(fakes.notifications.showPrivate, isTrue);
+      await tearDownScreen(tester, c);
+    });
+
     testWidgets('performance mode turns transitions off', (tester) async {
       c = await makeContainer(
         fakes,

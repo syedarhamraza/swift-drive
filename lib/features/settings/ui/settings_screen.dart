@@ -188,6 +188,16 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (v) =>
                 c.update((x) => x.copyWith(suppressNonEssential: v)),
           ),
+          SwitchListTile(
+            title: const Text('Show private content'),
+            subtitle: const Text(
+              'Some apps (LinkedIn, many messengers) mark notifications private, which hides them on the lock '
+              'screen. Turn on to show and read them here. Passengers can see the screen.',
+            ),
+            value: s.showPrivateNotifications,
+            onChanged: (v) =>
+                c.update((x) => x.copyWith(showPrivateNotifications: v)),
+          ),
 
           const _Header('Permissions'),
           const PermissionsSection(),

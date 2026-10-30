@@ -65,6 +65,7 @@ class LauncherSettings {
     this.showSpeed = true,
     this.showArtwork = true,
     this.suppressNonEssential = true,
+    this.showPrivateNotifications = false,
     this.performanceMode = false,
     this.fullScreen = false,
     this.weatherRefreshMinutes = 30,
@@ -94,6 +95,9 @@ class LauncherSettings {
   final bool showSpeed;
   final bool showArtwork;
   final bool suppressNonEssential;
+
+  /// Show and read notifications their app marked private (hidden on the lock screen).
+  final bool showPrivateNotifications;
   final bool performanceMode;
 
   /// Hides the status and navigation bars (they return with an edge swipe).
@@ -125,6 +129,7 @@ class LauncherSettings {
     bool? showSpeed,
     bool? showArtwork,
     bool? suppressNonEssential,
+    bool? showPrivateNotifications,
     bool? performanceMode,
     bool? fullScreen,
     int? weatherRefreshMinutes,
@@ -153,6 +158,8 @@ class LauncherSettings {
     showSpeed: showSpeed ?? this.showSpeed,
     showArtwork: showArtwork ?? this.showArtwork,
     suppressNonEssential: suppressNonEssential ?? this.suppressNonEssential,
+    showPrivateNotifications:
+        showPrivateNotifications ?? this.showPrivateNotifications,
     performanceMode: performanceMode ?? this.performanceMode,
     fullScreen: fullScreen ?? this.fullScreen,
     weatherRefreshMinutes: weatherRefreshMinutes ?? this.weatherRefreshMinutes,
@@ -183,6 +190,7 @@ class LauncherSettings {
     'showSpeed': showSpeed,
     'showArtwork': showArtwork,
     'suppressNonEssential': suppressNonEssential,
+    'showPrivateNotifications': showPrivateNotifications,
     'performanceMode': performanceMode,
     'fullScreen': fullScreen,
     'weatherRefreshMinutes': weatherRefreshMinutes,
@@ -280,6 +288,11 @@ class LauncherSettings {
       suppressNonEssential: read(
         'suppressNonEssential',
         d.suppressNonEssential,
+        (v) => v! as bool,
+      ),
+      showPrivateNotifications: read(
+        'showPrivateNotifications',
+        d.showPrivateNotifications,
         (v) => v! as bool,
       ),
       performanceMode: read(

@@ -20,7 +20,7 @@ noted; ⛔ unsupported by design or until hardware is verified.
 | External navigation | ✅ | `geo:` intent to the user's chosen navigation app |
 | GPS speed | ✅ | Doppler speed only, gated by accuracy, stale after 3 s, km/h or mph. Labelled informational |
 | Media | ✅ | All active media sessions, smart source selection, user source picker, play/pause/next/previous/seek, artwork |
-| Notifications | ✅ | Newest message card with count, Read aloud (TTS, on request only) and Dismiss/Open; full list in a sheet; hide non-essential. Memory only. No reply (needs RemoteInput capture) |
+| Notifications | ✅ | Newest message card with count, Read aloud (TTS, on request only) and Dismiss/Open; full list in a sheet; hide non-essential. Notifications an app marks private (LinkedIn, many messengers) show "content hidden" unless Settings → Show private content is on; the expanded text is used when present. Memory only. No reply (needs RemoteInput capture) |
 | Weather | ✅ | Open-Meteo current, feels-like, today's high/low, next 5 hours and 3 days in one request; cached with timestamp; offline state; Open-Meteo credit. Place name only when a Geocoder exists |
 | Theme | ✅ | Dark, light, system, or auto by sunrise/sunset (falls back to system without sun data). 5 accents |
 | Clock | ✅ | 12/24 h; minute-aligned timer, no per-second rebuilds |

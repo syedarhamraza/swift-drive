@@ -29,6 +29,7 @@ class NotificationBridge(private val context: Context, messenger: BinaryMessenge
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
+        LauncherNotificationListener.showPrivate = (arguments as? Map<*, *>)?.get("showPrivate") == true
         LauncherNotificationListener.onChange = { items -> events.success(items) }
         events.success(LauncherNotificationListener.instance?.snapshot() ?: emptyList<Any>())
     }

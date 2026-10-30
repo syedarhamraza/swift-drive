@@ -58,14 +58,20 @@ class LauncherNotificationListener : NotificationListenerService() {
         if (n.flags and Notification.FLAG_GROUP_SUMMARY != 0) return null
         if (n.extras.containsKey(Notification.EXTRA_MEDIA_SESSION)) return null // Shown by the media widget instead.
         if (n.visibility == Notification.VISIBILITY_SECRET) return null
-        // Private notifications show only their public version (or nothing beyond the app name).
-        val source = if (n.visibility == Notification.VISIBILITY_PRIVATE) n.publicVersion else n
+        // Private notifications show only their public version (or just the app name) unless the user
+        // turned on "Show private content".
+        val hidden = n.visibility == Notification.VISIBILITY_PRIVATE && !showPrivate
+        val source = if (hidden) n.publicVersion else n
+        val extras = source?.extras
         return mapOf(
             "key" to sbn.key,
             "packageName" to sbn.packageName,
             "appLabel" to appLabel(this, sbn.packageName),
-            "title" to source?.extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.take(60),
-            "text" to source?.extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.take(MAX_TEXT),
+            "title" to extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.take(60),
+            // The expanded text is the full message where the short text is often cut.
+            "text" to (extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)
+                ?: extras?.getCharSequence(Notification.EXTRA_TEXT))?.toString()?.take(MAX_TEXT),
+            "hidden" to (hidden && n.publicVersion == null),
             "postTime" to sbn.postTime,
             "clearable" to sbn.isClearable,
             "category" to n.category,
@@ -80,6 +86,10 @@ class LauncherNotificationListener : NotificationListenerService() {
         @Volatile
         var instance: LauncherNotificationListener? = null
             private set
+
+        /** Set by NotificationBridge from the user's setting each time Flutter starts listening. */
+        @Volatile
+        var showPrivate = false
 
         /** Set by NotificationBridge while Flutter listens. Always invoked on the main thread. */
         var onChange: ((List<Map<String, Any?>>) -> Unit)? = null
