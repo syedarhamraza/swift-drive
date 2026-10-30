@@ -77,8 +77,11 @@ class Dock extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     final axis = vertical ? Axis.vertical : Axis.horizontal;
 
+    // A static shadow lifts the rail off the map and drawer it floats over.
     final rail = Material(
       color: scheme.surface,
+      elevation: vertical ? 8 : 0,
+      shadowColor: Colors.black,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(SdRadius.rail),
@@ -121,8 +124,14 @@ class Dock extends ConsumerWidget {
       right: !vertical,
       top: vertical,
       child: Padding(
+        // Inset by twice the dashboard padding so the map shows around the rail on three sides.
         padding: vertical
-            ? const EdgeInsets.fromLTRB(SdSpace.sm, SdSpace.sm, 0, SdSpace.sm)
+            ? const EdgeInsets.fromLTRB(
+                2 * SdSpace.sm,
+                2 * SdSpace.sm,
+                0,
+                2 * SdSpace.sm,
+              )
             : const EdgeInsets.fromLTRB(SdSpace.sm, 0, SdSpace.sm, SdSpace.sm),
         child: SizedBox(
           width: vertical ? railExtent - 2 * SdSpace.sm : null,

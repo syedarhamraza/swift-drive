@@ -64,7 +64,7 @@ class DashboardScreen extends ConsumerWidget {
                   geometry: g,
                   size: inner.biggest,
                   drawerOpen: drawerOpen,
-                  cover: g.dockOnLeft ? railExtent - 2 * SdSpace.sm : 0,
+                  cover: g.dockOnLeft ? railExtent - SdSpace.sm : 0,
                 ),
               ),
             );
