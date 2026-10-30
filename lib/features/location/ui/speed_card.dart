@@ -24,34 +24,20 @@ class SpeedCard extends ConsumerWidget {
     final valid =
         speed.status == SpeedStatus.valid && speed.metersPerSecond != null;
 
-    final Widget body = valid
-        ? Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                convertSpeed(speed.metersPerSecond!, unit).round().toString(),
-                style: t.displayLarge?.copyWith(
-                  fontSize: 112,
-                  height: 1,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-              Text(
-                unitLabel,
-                style: t.titleMedium?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ],
-          )
-        : _Status(status: speed.status);
-
-    // Fills its pager page: a header, then the reading centred in the remaining space.
+    // Fills its pager page: a header, then the gauge (or the GPS state) in the remaining space.
     return SdCard(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
+      padding: const EdgeInsets.fromLTRB(
+        SdSpace.lg,
+        SdSpace.md,
+        SdSpace.lg,
+        SdSpace.md,
+      ),
+      gradient: RadialGradient(
+        center: const Alignment(0, 0.2),
+        radius: 0.9,
         colors: [
           Color.alphaBlend(
-            scheme.secondary.withValues(alpha: 0.22),
+            scheme.primary.withValues(alpha: 0.16),
             scheme.surface,
           ),
           scheme.surface,
@@ -83,9 +69,71 @@ class SpeedCard extends ConsumerWidget {
               const SizedBox(width: 28),
             ],
           ),
+          const SizedBox(height: SdSpace.xs),
           Expanded(
             child: Center(
-              child: FittedBox(fit: BoxFit.scaleDown, child: body),
+              child: valid
+                  ? _Reading(
+                      speed: convertSpeed(speed.metersPerSecond!, unit),
+                      unit: unitLabel,
+                    )
+                  : FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: _Status(status: speed.status),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Large digital reading. Tabular digits keep the number from shifting as it changes; the gradient is
+/// static, so a new reading costs one repaint of this card.
+class _Reading extends StatelessWidget {
+  const _Reading({required this.speed, required this.unit});
+
+  final double speed;
+  final String unit;
+
+  static const _gradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF6EE7B7), Color(0xFF7DD3FC)],
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final t = Theme.of(context).textTheme;
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          ShaderMask(
+            blendMode: BlendMode.srcIn,
+            shaderCallback: _gradient.createShader,
+            child: Text(
+              speed.round().toString(),
+              style: t.displayLarge?.copyWith(
+                fontSize: 128,
+                height: 1,
+                fontWeight: FontWeight.w300,
+                letterSpacing: -4,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ),
+          const SizedBox(width: SdSpace.md),
+          Text(
+            unit,
+            style: t.headlineSmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
