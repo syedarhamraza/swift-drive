@@ -9,8 +9,9 @@ import '../../apps/data/apps_repository.dart';
 import '../../apps/state/apps_providers.dart';
 import '../../apps/ui/app_picker.dart';
 import '../../bluetooth/domain/calling_adapter.dart';
-import '../../location/state/location_providers.dart';
 import '../../settings/ui/settings_screen.dart';
+import '../../status/data/device_status_repository.dart';
+import '../../status/state/device_status_providers.dart';
 import '../domain/dashboard_layout.dart';
 import '../state/dashboard_providers.dart';
 import 'clock_card.dart';
@@ -106,6 +107,7 @@ class Dock extends ConsumerWidget {
             direction: axis,
             children: [
               if (vertical) const _RailHeader(),
+              const Spacer(),
               for (final e in shown) button(e),
               const Spacer(),
               for (final e in fixed) button(e),
@@ -132,7 +134,7 @@ class Dock extends ConsumerWidget {
   }
 }
 
-/// Small clock and GPS state at the top of the vertical rail.
+/// Battery, connection and the time at the top of the vertical rail; the status bar may be hidden.
 class _RailHeader extends ConsumerWidget {
   const _RailHeader();
 
@@ -140,27 +142,78 @@ class _RailHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasFix = ref.watch(locationProvider.select((s) => s.fix != null));
+    final status = ref.watch(deviceStatusProvider);
     return SizedBox(
       height: height,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          if (status != null) ...[
+            _StatusRow(status: status),
+            const SizedBox(height: SdSpace.xs),
+          ],
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: SdSpace.sm),
             child: ClockText(compact: true),
           ),
-          const SizedBox(height: SdSpace.xs),
-          Icon(
-            hasFix ? Icons.gps_fixed : Icons.gps_not_fixed,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            semanticLabel: hasFix
-                ? 'GPS position available'
-                : 'No GPS position',
-          ),
         ],
       ),
+    );
+  }
+}
+
+class _StatusRow extends StatelessWidget {
+  const _StatusRow({required this.status});
+
+  final DeviceStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final battery = status.battery;
+    // Connection type only: signal strength is not read.
+    final (network, networkLabel) = switch (status.network) {
+      NetworkKind.wifi => (Icons.wifi_rounded, 'Wi-Fi'),
+      NetworkKind.cellular => (
+        Icons.signal_cellular_alt_rounded,
+        'Mobile data',
+      ),
+      NetworkKind.ethernet => (Icons.settings_ethernet_rounded, 'Ethernet'),
+      NetworkKind.other => (Icons.public_rounded, 'Connected'),
+      NetworkKind.none => (Icons.signal_wifi_off_rounded, 'Offline'),
+    };
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(network, size: 14, semanticLabel: networkLabel),
+        if (battery != null) ...[
+          const SizedBox(width: SdSpace.xs),
+          Semantics(
+            label: 'Battery $battery%${status.charging ? ', charging' : ''}',
+            excludeSemantics: true,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: ShapeDecoration(
+                shape: const StadiumBorder(),
+                color: status.charging
+                    ? SdColors.etaGreen
+                    : battery <= 15
+                    ? scheme.error
+                    : scheme.onSurface,
+              ),
+              child: Text(
+                '$battery',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.black,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
+                ),
+              ),
+            ),
+          ),
+          if (status.charging) const Icon(Icons.bolt_rounded, size: 12),
+        ],
+      ],
     );
   }
 }
@@ -188,6 +241,7 @@ class _DockButton extends ConsumerWidget {
     final circle = (extent - SdSpace.sm).clamp(44.0, 56.0);
     final Widget icon;
     final String label;
+    var plain = false;
     VoidCallback onTap;
     switch (entry) {
       case BuiltinEntry(:final id):
@@ -207,12 +261,12 @@ class _DockButton extends ConsumerWidget {
         final app = chosen == null || apps == null
             ? null
             : findApp(apps, chosen);
-        // Glyphs sit straight on the rail, sized like app icons, rather than in a circle of their own.
-        icon = app?.icon != null
+        plain = app?.icon == null;
+        icon = !plain
             ? AppIconImage(app!.icon, size: circle)
             : Icon(
                 i,
-                size: circle * 0.7,
+                size: circle * 0.45,
                 color: active ? scheme.onPrimaryContainer : scheme.onSurface,
               );
         onTap = () => _builtinAction(context, ref, id);
@@ -221,10 +275,11 @@ class _DockButton extends ConsumerWidget {
         final app = apps == null ? null : findApp(apps, appId);
         final missing = apps != null && app == null;
         label = app?.label ?? (missing ? 'Missing app' : '…');
+        plain = missing;
         icon = missing
             ? Icon(
                 Icons.warning_amber_rounded,
-                size: circle * 0.7,
+                size: circle * 0.45,
                 color: SdColors.warning,
               )
             : AppIconImage(app?.icon, size: circle);
@@ -240,7 +295,12 @@ class _DockButton extends ConsumerWidget {
                 }
               };
     }
-    final background = active ? scheme.primaryContainer : Colors.transparent;
+    // App icons are already round; built-in glyphs get a dark circle of the same size.
+    final background = active
+        ? scheme.primaryContainer
+        : plain
+        ? scheme.surfaceContainerHighest
+        : Colors.transparent;
     return SizedBox(
       width: vertical ? railExtent - 2 * SdSpace.sm : extent,
       height: vertical ? extent : 72,

@@ -93,8 +93,8 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-/// Map and cards side by side. Opening the drawer puts it where the map was and slides the map over the
-/// cards, so the map stays visible while picking an app.
+/// Map and cards side by side. Opening the drawer puts it where the map was and pushes the map into the
+/// cards' place (the cards slide off screen), so the map stays visible while picking an app.
 class _Panes extends StatelessWidget {
   const _Panes({
     required this.geometry,
@@ -126,9 +126,13 @@ class _Panes extends StatelessWidget {
 
     return Stack(
       children: [
-        Positioned.fromRect(
-          rect: span(sideStart, length),
-          // Cards stay alive under the map (keeping the pager page) but stop ticking.
+        // The map pushes the cards off the far edge; they stay alive (keeping the pager page) but stop ticking.
+        AnimatedPositioned.fromRect(
+          duration: duration,
+          curve: SdMotion.curve,
+          rect: drawerOpen
+              ? span(length + SdSpace.sm, 2 * length - split)
+              : span(sideStart, length),
           child: TickerMode(
             enabled: !drawerOpen,
             child: _SidePanel(geometry: g),

@@ -29,6 +29,8 @@ import 'package:swiftdrive/features/navigation/state/navigation_providers.dart';
 import 'package:swiftdrive/features/navigation/state/voice_guidance.dart';
 import 'package:swiftdrive/features/notifications/data/notifications_repository.dart';
 import 'package:swiftdrive/features/notifications/state/notifications_providers.dart';
+import 'package:swiftdrive/features/status/data/device_status_repository.dart';
+import 'package:swiftdrive/features/status/state/device_status_providers.dart';
 import 'package:swiftdrive/features/weather/data/weather_repository.dart';
 import 'package:swiftdrive/features/weather/state/weather_providers.dart';
 
@@ -157,6 +159,13 @@ class FakeBluetooth implements BluetoothRepository {
   Stream<BluetoothStatus> statusChanges() => const Stream.empty();
 }
 
+class FakeDeviceStatus implements DeviceStatusRepository {
+  final status$ = StreamController<DeviceStatus>.broadcast();
+
+  @override
+  Stream<DeviceStatus> statusChanges() => status$.stream;
+}
+
 class FakeDevice implements DeviceRepository {
   @override
   Future<DeviceReport> getReport({bool extra = false}) async =>
@@ -236,6 +245,7 @@ class Fakes {
   final notifications = FakeNotifications();
   final bluetooth = FakeBluetooth();
   final device = FakeDevice();
+  final deviceStatus = FakeDeviceStatus();
   final weather = FakeWeather();
   final routing = FakeRouting();
   final geocoding = FakeGeocoding();
@@ -250,6 +260,7 @@ class Fakes {
     notificationsRepositoryProvider.overrideWithValue(notifications),
     bluetoothRepositoryProvider.overrideWithValue(bluetooth),
     deviceRepositoryProvider.overrideWithValue(device),
+    deviceStatusRepositoryProvider.overrideWithValue(deviceStatus),
     weatherRepositoryProvider.overrideWithValue(weather),
     routingProviderProvider.overrideWithValue(routing),
     geocodingProviderProvider.overrideWithValue(geocoding),

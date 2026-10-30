@@ -4,6 +4,7 @@ import android.content.Intent
 import com.swiftdrive.launcher.platform.AppManager
 import com.swiftdrive.launcher.platform.BluetoothBridge
 import com.swiftdrive.launcher.platform.DeviceDiagnostics
+import com.swiftdrive.launcher.platform.DeviceStatusBridge
 import com.swiftdrive.launcher.platform.LauncherBridge
 import com.swiftdrive.launcher.platform.LocationService
 import com.swiftdrive.launcher.platform.MediaManager
@@ -30,6 +31,7 @@ class MainActivity : FlutterActivity() {
         NotificationBridge(applicationContext, messenger)
         BluetoothBridge(applicationContext, messenger)
         DeviceDiagnostics(applicationContext, messenger)
+        DeviceStatusBridge(applicationContext, messenger)
     }
 
     override fun onNewIntent(intent: Intent) {

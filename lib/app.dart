@@ -38,17 +38,16 @@ class _SwiftDriveAppState extends ConsumerState<SwiftDriveApp> {
     super.initState();
     _lifecycle = AppLifecycleListener(
       onResume: () {
+        // Some ROMs (seen on vivo) show the bars again when the launcher returns or starts.
+        _applySystemUi();
         ref.read(foregroundProvider.notifier).set(true);
         ref.read(resumeTickProvider.notifier).bump();
       },
       onHide: () => ref.read(foregroundProvider.notifier).set(false),
     );
-    // Flutter re-applies the chosen mode when the activity resumes, so setting it on change is enough.
     ref.listenManual(
       settingsProvider.select((s) => s.fullScreen),
-      (_, full) => SystemChrome.setEnabledSystemUIMode(
-        full ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
-      ),
+      (_, _) => _applySystemUi(),
       fireImmediately: true,
     );
     // HOME pressed while SwiftDrive is on top: go back to the dashboard.
@@ -56,6 +55,7 @@ class _SwiftDriveAppState extends ConsumerState<SwiftDriveApp> {
       _navigatorKey.currentState?.popUntil((r) => r.isFirst);
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applySystemUi();
       PerfMetrics.firstFrameTime = widget.startupWatch?.elapsed;
       AppLog.i(
         'startup',
@@ -64,6 +64,12 @@ class _SwiftDriveAppState extends ConsumerState<SwiftDriveApp> {
       ref.read(startupStageProvider.notifier).begin();
     });
   }
+
+  void _applySystemUi() => SystemChrome.setEnabledSystemUIMode(
+    ref.read(settingsProvider).fullScreen
+        ? SystemUiMode.immersiveSticky
+        : SystemUiMode.edgeToEdge,
+  );
 
   @override
   void dispose() {

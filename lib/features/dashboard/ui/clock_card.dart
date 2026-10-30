@@ -72,8 +72,9 @@ class _ClockTextState extends ConsumerState<ClockText>
     if (widget.compact) {
       return FittedBox(
         fit: BoxFit.scaleDown,
+        // No AM/PM on the narrow rail, as on car displays.
         child: Text(
-          formatClock(_now, use24h: use24h),
+          DateFormat(use24h ? 'HH:mm' : 'h:mm').format(_now),
           style: t.titleMedium,
           maxLines: 1,
         ),

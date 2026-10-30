@@ -12,7 +12,7 @@
   every transition reads its duration through `SdMotion.of`, so all of them become instant.
 - **Rebuild scope.** Widgets watch narrow `select`s of providers. The map and each dashboard card sit in their
   own `RepaintBoundary`, so a speed update repaints only the speed card.
-- **No polling.** Location, media, notifications, packages and Bluetooth arrive as native broadcast or callback
+- **No polling.** Location, media, notifications, packages, Bluetooth and battery/connection status arrive as native broadcast or callback
   streams. They are subscribed only while the launcher is in the foreground and their startup stage is reached.
   Weather refreshes every 30 min (60 min in performance mode).
 - **Staged startup.** First frame first. Apps come next, then media and location, then the map, and weather and

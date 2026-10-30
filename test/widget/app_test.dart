@@ -20,6 +20,7 @@ import 'package:swiftdrive/features/notifications/data/notifications_repository.
 import 'package:swiftdrive/features/notifications/state/notifications_providers.dart';
 import 'package:swiftdrive/features/onboarding/ui/onboarding_screen.dart';
 import 'package:swiftdrive/features/settings/ui/settings_screen.dart';
+import 'package:swiftdrive/features/status/data/device_status_repository.dart';
 import 'package:swiftdrive/features/weather/data/weather_repository.dart';
 import 'package:swiftdrive/features/weather/ui/weather_card.dart';
 
@@ -291,6 +292,13 @@ void main() {
         tester.getTopLeft(find.byType(MapPanel)).dx,
         greaterThan(tester.getTopRight(find.byType(AppDrawerPanel)).dx),
       );
+      // ...pushing the cards off the right edge.
+      expect(
+        tester.getTopLeft(find.byType(MediaCard)).dx,
+        greaterThanOrEqualTo(
+          tester.view.physicalSize.width / tester.view.devicePixelRatio,
+        ),
+      );
       await tester.enterText(find.byType(TextField), 'radio');
       await tester.pump();
       expect(find.text('Music Player'), findsNothing);
@@ -323,6 +331,24 @@ void main() {
       await tester.pumpAndSettle();
       expect(c.read(drawerOpenProvider), isFalse);
       expect(find.byType(DashboardScreen), findsOneWidget);
+      await tearDownScreen(tester, c);
+    });
+
+    testWidgets('rail shows battery and connection from the device', (
+      tester,
+    ) async {
+      await pumpApp(tester, c, size: const Size(1280, 800));
+      fakes.media.snapshots$.add(noMedia);
+      fakes.deviceStatus.status$.add(
+        const DeviceStatus(
+          battery: 42,
+          charging: true,
+          network: NetworkKind.wifi,
+        ),
+      );
+      await tester.pump();
+      expect(find.bySemanticsLabel('Battery 42%, charging'), findsOneWidget);
+      expect(find.bySemanticsLabel('Wi-Fi'), findsOneWidget);
       await tearDownScreen(tester, c);
     });
 
