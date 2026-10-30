@@ -119,15 +119,7 @@ class _NowPlaying extends ConsumerWidget {
     }
 
     // Content always sits on a dark scrim: force light foreground colours whatever the app theme is.
-    final onArt = theme.copyWith(
-      colorScheme: scheme.copyWith(
-        onSurface: Colors.white,
-        onSurfaceVariant: Colors.white70,
-      ),
-      textTheme: theme.textTheme.apply(
-        bodyColor: Colors.white,
-        displayColor: Colors.white,
-      ),
+    final onArt = onDarkBackdrop(theme).copyWith(
       sliderTheme: theme.sliderTheme.copyWith(
         activeTrackColor: Colors.white,
         inactiveTrackColor: Colors.white24,
@@ -269,39 +261,10 @@ class _NowPlaying extends ConsumerWidget {
                         )
                       else
                         const SizedBox(height: SdSpace.sm),
+                      // Three equal pills, so each control is as easy to hit as the others.
                       Row(
                         children: [
-                          Tooltip(
-                            message: session.isPlaying ? 'Pause' : 'Play',
-                            child: FilledButton(
-                              style: FilledButton.styleFrom(
-                                minimumSize: const Size(96, SdSize.driveTarget),
-                              ),
-                              onPressed: () => run(
-                                session.isPlaying
-                                    ? MediaAction.pause
-                                    : MediaAction.play,
-                              ),
-                              child: AnimatedSwitcher(
-                                duration: fast,
-                                transitionBuilder: (child, animation) =>
-                                    ScaleTransition(
-                                      scale: animation,
-                                      child: child,
-                                    ),
-                                child: Icon(
-                                  session.isPlaying
-                                      ? Icons.pause_rounded
-                                      : Icons.play_arrow_rounded,
-                                  key: ValueKey(session.isPlaying),
-                                  size: 32,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            iconSize: 32,
+                          _Control(
                             tooltip: 'Previous',
                             onPressed:
                                 session.supports(
@@ -309,10 +272,33 @@ class _NowPlaying extends ConsumerWidget {
                                 )
                                 ? () => run(MediaAction.previous)
                                 : null,
-                            icon: const Icon(Icons.skip_previous_rounded),
+                            child: const Icon(Icons.skip_previous_rounded),
                           ),
-                          IconButton(
-                            iconSize: 32,
+                          const SizedBox(width: SdSpace.sm),
+                          _Control(
+                            tooltip: session.isPlaying ? 'Pause' : 'Play',
+                            onPressed: () => run(
+                              session.isPlaying
+                                  ? MediaAction.pause
+                                  : MediaAction.play,
+                            ),
+                            child: AnimatedSwitcher(
+                              duration: fast,
+                              transitionBuilder: (child, animation) =>
+                                  ScaleTransition(
+                                    scale: animation,
+                                    child: child,
+                                  ),
+                              child: Icon(
+                                session.isPlaying
+                                    ? Icons.pause_rounded
+                                    : Icons.play_arrow_rounded,
+                                key: ValueKey(session.isPlaying),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: SdSpace.sm),
+                          _Control(
                             tooltip: 'Next',
                             onPressed:
                                 session.supports(
@@ -320,8 +306,9 @@ class _NowPlaying extends ConsumerWidget {
                                 )
                                 ? () => run(MediaAction.next)
                                 : null,
-                            icon: const Icon(Icons.skip_next_rounded),
+                            child: const Icon(Icons.skip_next_rounded),
                           ),
+                          const SizedBox(width: SdSpace.sm),
                         ],
                       ),
                     ],
@@ -443,4 +430,32 @@ class _ProgressState extends ConsumerState<_Progress> {
       ],
     );
   }
+}
+
+class _Control extends StatelessWidget {
+  const _Control({
+    required this.tooltip,
+    required this.onPressed,
+    required this.child,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Tooltip(
+      message: tooltip,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, SdSize.driveTarget),
+          padding: EdgeInsets.zero,
+          iconSize: 32,
+        ),
+        onPressed: onPressed,
+        child: child,
+      ),
+    ),
+  );
 }

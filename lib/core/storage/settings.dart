@@ -66,6 +66,7 @@ class LauncherSettings {
     this.showArtwork = true,
     this.suppressNonEssential = true,
     this.performanceMode = false,
+    this.fullScreen = false,
     this.weatherRefreshMinutes = 30,
   });
 
@@ -94,6 +95,9 @@ class LauncherSettings {
   final bool showArtwork;
   final bool suppressNonEssential;
   final bool performanceMode;
+
+  /// Hides the status and navigation bars (they return with an edge swipe).
+  final bool fullScreen;
   final int weatherRefreshMinutes;
 
   LauncherSettings copyWith({
@@ -122,6 +126,7 @@ class LauncherSettings {
     bool? showArtwork,
     bool? suppressNonEssential,
     bool? performanceMode,
+    bool? fullScreen,
     int? weatherRefreshMinutes,
   }) => LauncherSettings(
     onboardingDone: onboardingDone ?? this.onboardingDone,
@@ -149,6 +154,7 @@ class LauncherSettings {
     showArtwork: showArtwork ?? this.showArtwork,
     suppressNonEssential: suppressNonEssential ?? this.suppressNonEssential,
     performanceMode: performanceMode ?? this.performanceMode,
+    fullScreen: fullScreen ?? this.fullScreen,
     weatherRefreshMinutes: weatherRefreshMinutes ?? this.weatherRefreshMinutes,
   );
 
@@ -178,6 +184,7 @@ class LauncherSettings {
     'showArtwork': showArtwork,
     'suppressNonEssential': suppressNonEssential,
     'performanceMode': performanceMode,
+    'fullScreen': fullScreen,
     'weatherRefreshMinutes': weatherRefreshMinutes,
   };
 
@@ -280,6 +287,7 @@ class LauncherSettings {
         d.performanceMode,
         (v) => v! as bool,
       ),
+      fullScreen: read('fullScreen', d.fullScreen, (v) => v! as bool),
       weatherRefreshMinutes: read(
         'weatherRefreshMinutes',
         d.weatherRefreshMinutes,

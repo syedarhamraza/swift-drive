@@ -6,15 +6,15 @@ noted; ⛔ unsupported by design or until hardware is verified.
 | Area | Status | Notes |
 |---|---|---|
 | Dashboard (map, media, weather, speed, notifications, rail) | ✅ | Rounded rail with clock and GPS state; map; card column; vertical pager (weather, speed, notifications, radio) with dots. Wide screens give the pager its own column. Presets: balanced, map-focused, media-focused, compact; automatic compact on small screens; stacked in portrait |
-| Dock (rail) | ✅ | Built-ins plus pinned apps as round icons with tooltips; reorder/add/remove in Settings → Customise dock. A missing app offers Replace/Remove. Apps and Settings are pinned at the bottom and always reachable |
-| App drawer | ✅ | Opens over the cards while the map stays visible; Back closes it. First tile exits to the factory launcher. Search by label or package, A–Z, favourites first, page up/down buttons, hide/unhide, pin to dock, assign to a factory role. Refreshes on install/uninstall |
+| Dock (rail) | ✅ | Floats over the map's edge. Built-ins as large glyphs (or the chosen app's icon for Music/Phone/Radio; Maps opens the navigation app) plus pinned apps as round icons, with tooltips; reorder/add/remove in Settings → Customise dock. A missing app offers Replace/Remove. Apps and Settings are pinned at the bottom and always reachable |
+| App drawer | ✅ | Opens from behind the rail in the map's place, on a static gradient (no blur); the map slides over the cards and stays visible. Back closes it. Icons are round, labels one line. First tile exits to the factory launcher. Search by label or package, A–Z, favourites first, page up/down buttons, hide/unhide, pin to dock, assign to a factory role. Refreshes on install/uninstall |
 | Factory shortcuts (navigation, music, radio, phone, vehicle settings) | ✅ | The user picks installed apps; each is re-checked before launch |
 | Default HOME setup | ✅ | RoleManager dialog (API 29+) or the system Home settings |
 | Factory-launcher recovery | ✅ | Lists other HOME apps and launches them directly; written instructions as well |
 | Map | ✅ | MapLibre + OpenFreeMap vector styles (light/dark follow the theme), follow/free-pan/recenter, optional heading-up |
 | Map fallback | ✅ | Map disabled, or style not loaded within 20 s → card with external navigation |
-| Destination search | ✅ | Nominatim, on submit only, rate-limited, results cached |
-| Routing and guidance | ✅ | OSRM route, banner with next maneuver/distance/ETA, off-route detection and reroute, arrival |
+| Destination search | ⏸ | Hidden: the dashboard map is for orientation only and Maps opens the navigation app. The code (Nominatim, on submit only, rate-limited, cached) is kept |
+| Routing and guidance | ⏸ | Unreachable while destination search is hidden.  OSRM route, banner with next maneuver/distance/ETA, off-route detection and reroute, arrival |
 | Voice prompts | 🟡 | 500 m and 100 m, mute toggle. English and metric only |
 | Background navigation | ⛔ | Guidance pauses when SwiftDrive is not in the foreground (no foreground service). Use an external app for that |
 | External navigation | ✅ | `geo:` intent to the user's chosen navigation app |
@@ -32,5 +32,6 @@ noted; ⛔ unsupported by design or until hardware is verified.
 | Settings | ✅ | Appearance, dock, units, map/endpoints, voice, media, notifications, performance mode, diagnostics, reset, about/licences |
 | Onboarding | ✅ | 6 pages, skippable; permissions requested only on tap |
 | Staged startup | ✅ | Shell, then apps, then media/location, then map, then weather/diagnostics |
+| Full screen | ✅ | Settings → Display. Hides the status and navigation bars (immersive sticky); an edge swipe shows them briefly |
 | Performance mode | ✅ | No route transitions, no progress-bar animation, half-rate weather refresh |
 | Corrupt settings recovery | ✅ | Per-field fallback to defaults |

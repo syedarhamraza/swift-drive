@@ -13,7 +13,7 @@ camera or the CAN bus.
 ## Features
 
 - Dashboard with four layout presets that adapt from 1024×600 to 1920×720.
-- Vector map (MapLibre + OpenFreeMap) with follow mode, destination search, OSRM routing, turn banner, rerouting
+- Vector map (MapLibre + OpenFreeMap) with follow mode, for orientation; the Maps button opens your navigation app
   and voice prompts. Falls back to external navigation.
 - Media controls for any app that publishes a media session (requires notification access).
 - GPS speed (informational), Open-Meteo weather, notifications list.

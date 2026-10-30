@@ -17,7 +17,6 @@ import '../../location/state/location_providers.dart';
 import '../../navigation/data/navigation_models.dart';
 import '../../navigation/domain/route_geometry.dart';
 import '../../navigation/state/navigation_providers.dart';
-import '../../navigation/ui/destination_sheet.dart';
 import '../../navigation/ui/nav_banner.dart';
 
 const _routeSource = 'sd-route';
@@ -27,7 +26,10 @@ const _styleTimeout = Duration(seconds: 20);
 /// are driven by our own LocationManager fixes through MapLibre's manual location source, so neither
 /// location permission inside the plugin nor Google Play Services is involved.
 class MapPanel extends ConsumerStatefulWidget {
-  const MapPanel({super.key});
+  const MapPanel({super.key, this.leftInset = 0});
+
+  /// Width covered by something floating over the map's left edge (the rail); controls stay clear of it.
+  final double leftInset;
 
   @override
   ConsumerState<MapPanel> createState() => _MapPanelState();
@@ -280,6 +282,7 @@ class _MapPanelState extends ConsumerState<MapPanel> {
     });
 
     final overlay = _Overlay(
+      leftInset: widget.leftInset,
       follow: _follow,
       mapReady: enabled && !_failed && _styleLoaded,
       onRecenter: () => _setFollow(true),
@@ -346,6 +349,7 @@ class _MapPanelState extends ConsumerState<MapPanel> {
 
 class _Overlay extends ConsumerWidget {
   const _Overlay({
+    required this.leftInset,
     required this.follow,
     required this.mapReady,
     required this.onRecenter,
@@ -353,6 +357,7 @@ class _Overlay extends ConsumerWidget {
     required this.onZoomOut,
   });
 
+  final double leftInset;
   final bool follow;
   final bool mapReady;
   final VoidCallback onRecenter;
@@ -370,8 +375,15 @@ class _Overlay extends ConsumerWidget {
     Widget fade(Widget child, Animation<double> a) =>
         FadeTransition(opacity: a, child: child);
     return Positioned.fill(
-      child: Padding(
-        padding: const EdgeInsets.all(SdSpace.md),
+      child: AnimatedPadding(
+        duration: medium,
+        curve: SdMotion.curve,
+        padding: EdgeInsets.fromLTRB(
+          SdSpace.md + leftInset,
+          SdSpace.md,
+          SdSpace.md,
+          SdSpace.md,
+        ),
         child: Stack(
           children: [
             Align(
@@ -386,19 +398,7 @@ class _Overlay extends ConsumerWidget {
                 ),
                 child: hasRoute
                     ? const ManeuverCard(key: ValueKey('route'))
-                    : FilledButton.tonalIcon(
-                        key: const ValueKey('search'),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(200, SdSize.driveTarget),
-                          alignment: Alignment.centerLeft,
-                        ),
-                        onPressed: () => showDestinationSheet(
-                          context,
-                          mapAvailable: mapReady,
-                        ),
-                        icon: const Icon(Icons.search),
-                        label: const Text('Where to?'),
-                      ),
+                    : const SizedBox.shrink(),
               ),
             ),
             // The ETA pill rises from the bottom edge when a route starts and sinks away when it ends.
@@ -443,16 +443,10 @@ class _Overlay extends ConsumerWidget {
                               padding: const EdgeInsets.only(
                                 bottom: SdSpace.sm,
                               ),
-                              child: IconButton.filled(
+                              child: _MapButton(
                                 tooltip: 'Recenter',
-                                style: IconButton.styleFrom(
-                                  minimumSize: const Size(
-                                    SdSize.driveTarget,
-                                    SdSize.driveTarget,
-                                  ),
-                                ),
+                                icon: Icons.my_location,
                                 onPressed: onRecenter,
-                                icon: const Icon(Icons.my_location),
                               ),
                             ),
                     ),

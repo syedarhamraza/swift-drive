@@ -10,7 +10,6 @@ import '../../apps/state/apps_providers.dart';
 import '../../apps/ui/app_picker.dart';
 import '../../bluetooth/domain/calling_adapter.dart';
 import '../../location/state/location_providers.dart';
-import '../../navigation/ui/destination_sheet.dart';
 import '../../settings/ui/settings_screen.dart';
 import '../domain/dashboard_layout.dart';
 import '../state/dashboard_providers.dart';
@@ -44,12 +43,12 @@ class AppEntry extends DockEntry {
 
 (String, IconData) builtinInfo(String id) => switch (id) {
   'home' => ('Home', Icons.home_rounded),
-  'maps' => ('Maps', Icons.map_outlined),
-  'music' => ('Music', Icons.music_note_outlined),
-  'phone' => ('Phone', Icons.phone_outlined),
-  'radio' => ('Radio', Icons.radio_outlined),
+  'maps' => ('Maps', Icons.map_rounded),
+  'music' => ('Music', Icons.music_note_rounded),
+  'phone' => ('Phone', Icons.phone_rounded),
+  'radio' => ('Radio', Icons.radio_rounded),
   'apps' => ('Apps', Icons.apps_rounded),
-  'settings' => ('Settings', Icons.settings_outlined),
+  'settings' => ('Settings', Icons.settings_rounded),
   _ => (id, Icons.help_outline),
 };
 
@@ -190,7 +189,6 @@ class _DockButton extends ConsumerWidget {
     final Widget icon;
     final String label;
     VoidCallback onTap;
-    var appIcon = entry is AppEntry;
     switch (entry) {
       case BuiltinEntry(:final id):
         final (l, i) = builtinInfo(id);
@@ -209,12 +207,12 @@ class _DockButton extends ConsumerWidget {
         final app = chosen == null || apps == null
             ? null
             : findApp(apps, chosen);
-        appIcon = app?.icon != null;
-        icon = appIcon
-            ? AppIconImage(app!.icon, size: circle - 6)
+        // Glyphs sit straight on the rail, sized like app icons, rather than in a circle of their own.
+        icon = app?.icon != null
+            ? AppIconImage(app!.icon, size: circle)
             : Icon(
                 i,
-                size: circle * 0.5,
+                size: circle * 0.7,
                 color: active ? scheme.onPrimaryContainer : scheme.onSurface,
               );
         onTap = () => _builtinAction(context, ref, id);
@@ -226,10 +224,10 @@ class _DockButton extends ConsumerWidget {
         icon = missing
             ? Icon(
                 Icons.warning_amber_rounded,
-                size: circle * 0.5,
+                size: circle * 0.7,
                 color: SdColors.warning,
               )
-            : AppIconImage(app?.icon, size: circle - 6);
+            : AppIconImage(app?.icon, size: circle);
         onTap = missing
             ? () => _replaceMissing(context, ref, appId)
             : () async {
@@ -242,11 +240,7 @@ class _DockButton extends ConsumerWidget {
                 }
               };
     }
-    final background = active
-        ? scheme.primaryContainer
-        : appIcon
-        ? Colors.transparent
-        : scheme.surfaceContainerHighest;
+    final background = active ? scheme.primaryContainer : Colors.transparent;
     return SizedBox(
       width: vertical ? railExtent - 2 * SdSpace.sm : extent,
       height: vertical ? extent : 72,
@@ -287,11 +281,8 @@ class _DockButton extends ConsumerWidget {
         ref.read(drawerOpenProvider.notifier).set(false);
         nav.popUntil((r) => r.isFirst);
       case 'maps':
-        if (ref.read(settingsProvider).mapEnabled) {
-          await showDestinationSheet(context, mapAvailable: true);
-        } else {
-          await launchRole(context, ref, FactoryRole.navigation);
-        }
+        // The dashboard map is for orientation; turn-by-turn runs in the user's navigation app.
+        await launchRole(context, ref, FactoryRole.navigation);
       case 'music':
         await launchRole(context, ref, FactoryRole.music);
       case 'phone':

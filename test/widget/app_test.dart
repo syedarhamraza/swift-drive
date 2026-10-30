@@ -13,6 +13,7 @@ import 'package:swiftdrive/features/diagnostics/ui/diagnostics_screen.dart';
 import 'package:swiftdrive/features/location/data/location_repository.dart';
 import 'package:swiftdrive/features/location/state/location_providers.dart';
 import 'package:swiftdrive/features/location/ui/speed_card.dart';
+import 'package:swiftdrive/features/maps/ui/map_panel.dart';
 import 'package:swiftdrive/features/media/data/media_repository.dart';
 import 'package:swiftdrive/features/media/ui/media_card.dart';
 import 'package:swiftdrive/features/notifications/data/notifications_repository.dart';
@@ -280,9 +281,16 @@ void main() {
       // Media access arrives as the first stream event; until then the card shows a spinner.
       fakes.media.snapshots$.add(noMedia);
       await tester.pump();
+      final mapLeft = tester.getTopLeft(find.byType(MapPanel)).dx;
       await tester.tap(find.byTooltip('Apps'));
       await tester.pumpAndSettle();
       expect(find.byType(AppDrawerPanel), findsOneWidget);
+      // The drawer takes the map's place and the map moves over the cards.
+      expect(tester.getTopLeft(find.byType(AppDrawerPanel)).dx, mapLeft);
+      expect(
+        tester.getTopLeft(find.byType(MapPanel)).dx,
+        greaterThan(tester.getTopRight(find.byType(AppDrawerPanel)).dx),
+      );
       await tester.enterText(find.byType(TextField), 'radio');
       await tester.pump();
       expect(find.text('Music Player'), findsNothing);
@@ -323,7 +331,7 @@ void main() {
       // Media access arrives as the first stream event; until then the card shows a spinner.
       fakes.media.snapshots$.add(noMedia);
       await tester.pump();
-      final speed = find.text('GPS speed (informational)').hitTestable();
+      final speed = find.text('GPS speed').hitTestable();
       expect(speed, findsNothing);
       await tester.tap(find.byTooltip('Speed'));
       await tester.pumpAndSettle();

@@ -13,6 +13,7 @@ class SdCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(SdSpace.lg),
     this.onTap,
     this.color,
+    this.gradient,
   });
 
   final Widget child;
@@ -22,16 +23,35 @@ class SdCard extends StatelessWidget {
   /// Defaults to the theme's card colour.
   final Color? color;
 
+  /// Painted over [color]; static, so it costs nothing after the first frame.
+  final Gradient? gradient;
+
   @override
   Widget build(BuildContext context) => Card(
     color: color,
     clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(padding: padding, child: child),
+    child: Ink(
+      decoration: BoxDecoration(gradient: gradient),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(padding: padding, child: child),
+      ),
     ),
   );
 }
+
+/// Light text and icons for content on artwork or a dark gradient, whatever the app theme is.
+ThemeData onDarkBackdrop(ThemeData theme) => theme.copyWith(
+  colorScheme: theme.colorScheme.copyWith(
+    onSurface: Colors.white,
+    onSurfaceVariant: Colors.white70,
+  ),
+  textTheme: theme.textTheme.apply(
+    bodyColor: Colors.white,
+    displayColor: Colors.white,
+  ),
+  iconTheme: theme.iconTheme.copyWith(color: Colors.white),
+);
 
 /// Explicit state for missing data/permissions: what is wrong and, when possible, how to fix it.
 class StatusMessage extends StatelessWidget {
@@ -88,7 +108,7 @@ class StatusMessage extends StatelessWidget {
   }
 }
 
-/// Decodes launcher icons at display size to keep the image cache small.
+/// Round app icon, decoded at display size to keep the image cache small.
 class AppIconImage extends StatelessWidget {
   const AppIconImage(this.bytes, {super.key, this.size = 48});
 
@@ -100,13 +120,15 @@ class AppIconImage extends StatelessWidget {
     final b = bytes;
     if (b == null) return Icon(Icons.android, size: size);
     final px = (size * MediaQuery.devicePixelRatioOf(context)).round();
-    return Image.memory(
-      b,
-      width: size,
-      height: size,
-      cacheWidth: px,
-      gaplessPlayback: true,
-      filterQuality: FilterQuality.medium,
+    return ClipOval(
+      child: Image.memory(
+        b,
+        width: size,
+        height: size,
+        cacheWidth: px,
+        gaplessPlayback: true,
+        filterQuality: FilterQuality.medium,
+      ),
     );
   }
 }

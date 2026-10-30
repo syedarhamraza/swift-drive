@@ -18,34 +18,71 @@ class SpeedCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final speed = ref.watch(locationProvider.select((s) => s.speed));
     final unit = ref.watch(settingsProvider.select((s) => s.speedUnit));
+    final scheme = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
     final unitLabel = unit == SpeedUnit.kmh ? 'km/h' : 'mph';
+    final valid =
+        speed.status == SpeedStatus.valid && speed.metersPerSecond != null;
 
-    Widget body;
-    if (speed.status == SpeedStatus.valid && speed.metersPerSecond != null) {
-      body = Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Text(
-            convertSpeed(speed.metersPerSecond!, unit).round().toString(),
-            style: t.displayLarge?.copyWith(fontSize: 96, height: 1),
-          ),
-          const SizedBox(width: SdSpace.sm),
-          Text(unitLabel, style: t.titleLarge),
-        ],
-      );
-    } else {
-      body = _StatusLine(status: speed.status);
-    }
+    final Widget body = valid
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                convertSpeed(speed.metersPerSecond!, unit).round().toString(),
+                style: t.displayLarge?.copyWith(
+                  fontSize: 112,
+                  height: 1,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+              Text(
+                unitLabel,
+                style: t.titleMedium?.copyWith(color: scheme.onSurfaceVariant),
+              ),
+            ],
+          )
+        : _Status(status: speed.status);
 
-    // Fills its pager page: label on top, the reading centred in the remaining space.
+    // Fills its pager page: a header, then the reading centred in the remaining space.
     return SdCard(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color.alphaBlend(
+            scheme.secondary.withValues(alpha: 0.22),
+            scheme.surface,
+          ),
+          scheme.surface,
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('GPS speed (informational)', style: t.bodySmall),
+          Row(
+            children: [
+              Icon(
+                valid ? Icons.gps_fixed : Icons.gps_not_fixed,
+                size: 18,
+                color: valid ? SdColors.etaGreen : scheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: SdSpace.sm),
+              Text('GPS speed', style: t.titleSmall),
+              const SizedBox(width: SdSpace.sm),
+              Expanded(
+                child: Text(
+                  'Informational',
+                  textAlign: TextAlign.end,
+                  style: t.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // Clear of the pager dots.
+              const SizedBox(width: 28),
+            ],
+          ),
           Expanded(
             child: Center(
               child: FittedBox(fit: BoxFit.scaleDown, child: body),
@@ -57,19 +94,36 @@ class SpeedCard extends ConsumerWidget {
   }
 }
 
-class _StatusLine extends ConsumerWidget {
-  const _StatusLine({required this.status});
+class _Status extends ConsumerWidget {
+  const _Status({required this.status});
 
   final SpeedStatus status;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final (text, action, onAction) = switch (status) {
-      SpeedStatus.acquiring => ('Acquiring GPS…', null, null),
-      SpeedStatus.poorAccuracy => ('GPS signal weak', null, null),
-      SpeedStatus.stale => ('No recent GPS fix', null, null),
+    final scheme = Theme.of(context).colorScheme;
+    final (text, icon, action, onAction) = switch (status) {
+      SpeedStatus.acquiring => (
+        'Acquiring GPS…',
+        Icons.location_searching,
+        null,
+        null,
+      ),
+      SpeedStatus.poorAccuracy => (
+        'GPS signal weak',
+        Icons.gps_not_fixed,
+        null,
+        null,
+      ),
+      SpeedStatus.stale => (
+        'No recent GPS fix',
+        Icons.gps_not_fixed,
+        null,
+        null,
+      ),
       SpeedStatus.gpsDisabled => (
         'GPS is off',
+        Icons.gps_off,
         'Turn on',
         () => ref
             .read(launcherRepositoryProvider)
@@ -77,17 +131,30 @@ class _StatusLine extends ConsumerWidget {
       ),
       SpeedStatus.permissionDenied => (
         'Location not allowed',
+        Icons.location_disabled,
         'Allow',
         () => requestLocation(ref),
       ),
-      SpeedStatus.unavailable => ('No GPS on this device', null, null),
-      SpeedStatus.valid => ('—', null, null),
+      SpeedStatus.unavailable => (
+        'No GPS on this device',
+        Icons.gps_off,
+        null,
+        null,
+      ),
+      SpeedStatus.valid => ('—', Icons.gps_fixed, null, null),
     };
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        CircleAvatar(
+          radius: 32,
+          backgroundColor: scheme.secondaryContainer,
+          child: Icon(icon, size: 32, color: scheme.onSecondaryContainer),
+        ),
+        const SizedBox(height: SdSpace.md),
         Text(text, style: Theme.of(context).textTheme.titleMedium),
         if (action != null) ...[
-          const SizedBox(width: SdSpace.md),
+          const SizedBox(height: SdSpace.md),
           FilledButton.tonal(onPressed: onAction, child: Text(action)),
         ],
       ],

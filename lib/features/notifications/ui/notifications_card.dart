@@ -21,6 +21,7 @@ class NotificationsCard extends ConsumerWidget {
     final access = ref.watch(notificationsProvider.select((s) => s.access));
     final items = ref.watch(visibleNotificationsProvider);
     final t = Theme.of(context).textTheme;
+    final scheme = Theme.of(context).colorScheme;
 
     final Widget child;
     if (access == false) {
@@ -51,12 +52,19 @@ class NotificationsCard extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            const Icon(Icons.notifications_none),
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: scheme.secondaryContainer,
+              child: Icon(
+                Icons.notifications_none_rounded,
+                color: scheme.onSecondaryContainer,
+              ),
+            ),
             const SizedBox(width: SdSpace.md),
             Flexible(
               child: Text(
-                'No notifications',
-                style: t.bodyMedium,
+                'No new notifications',
+                style: t.titleSmall,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -152,80 +160,115 @@ class _Latest extends ConsumerWidget {
             label: const Text('Open'),
           );
 
-    return SdCard(
-      onTap: () => showNotificationsSheet(context),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              ClipOval(child: AppIconImage(app?.icon, size: 44)),
-              const SizedBox(width: SdSpace.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.title ?? item.appLabel,
-                      style: t.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      item.text ??
-                          '${item.appLabel} · ${formatAge(item.postTime, DateTime.now())}',
-                      style: t.bodyMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+    final muted = t.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
+    return LayoutBuilder(
+      builder: (context, box) {
+        // Short pager pages (a phone in landscape) drop the source line and keep the text to one line.
+        final compact = box.maxHeight < 230;
+        return SdCard(
+          onTap: () => showNotificationsSheet(context),
+          padding: compact
+              ? const EdgeInsets.fromLTRB(
+                  SdSpace.lg,
+                  SdSpace.md,
+                  SdSpace.lg,
+                  SdSpace.md,
+                )
+              : const EdgeInsets.all(SdSpace.lg),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.alphaBlend(
+                scheme.tertiary.withValues(alpha: 0.18),
+                scheme.surface,
               ),
-              if (count > 1)
-                Tooltip(
-                  message: '$count notifications',
-                  child: Container(
-                    constraints: const BoxConstraints(minWidth: 28),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: SdSpace.sm,
-                      vertical: 2,
-                    ),
-                    decoration: ShapeDecoration(
-                      shape: const StadiumBorder(),
-                      color: scheme.primaryContainer,
-                    ),
+              scheme.surface,
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AppIconImage(app?.icon, size: compact ? 28 : 24),
+                  const SizedBox(width: SdSpace.sm),
+                  Expanded(
                     child: Text(
-                      '$count',
-                      textAlign: TextAlign.center,
-                      style: t.labelLarge?.copyWith(
-                        color: scheme.onPrimaryContainer,
+                      compact
+                          ? item.title ?? item.appLabel
+                          : '${item.appLabel} · ${formatAge(item.postTime, DateTime.now())}',
+                      style: compact ? t.titleMedium : muted,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (count > 1)
+                    Tooltip(
+                      message: '$count notifications',
+                      child: Container(
+                        constraints: const BoxConstraints(minWidth: 28),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: SdSpace.sm,
+                          vertical: 2,
+                        ),
+                        decoration: ShapeDecoration(
+                          shape: const StadiumBorder(),
+                          color: scheme.primaryContainer,
+                        ),
+                        child: Text(
+                          '$count',
+                          textAlign: TextAlign.center,
+                          style: t.labelLarge?.copyWith(
+                            color: scheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              if (!compact) ...[
+                const SizedBox(height: SdSpace.sm),
+                Text(
+                  item.title ?? item.appLabel,
+                  style: t.titleLarge,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              if (item.text != null)
+                Text(
+                  item.text!,
+                  style: (compact ? t.bodyMedium : t.bodyLarge)?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  maxLines: compact ? 1 : 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              SizedBox(height: compact ? SdSpace.sm : SdSpace.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: Tooltip(
+                      message: 'Read aloud',
+                      child: FilledButton.icon(
+                        onPressed: readAloud,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('Read'),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: SdSpace.md),
-          Row(
-            children: [
-              Expanded(
-                child: Tooltip(
-                  message: 'Read aloud',
-                  child: FilledButton.icon(
-                    onPressed: readAloud,
-                    icon: const Icon(Icons.play_arrow_rounded),
-                    label: const Text('Read'),
-                  ),
-                ),
+                  if (second != null) ...[
+                    const SizedBox(width: SdSpace.sm),
+                    Expanded(child: second),
+                  ],
+                ],
               ),
-              if (second != null) ...[
-                const SizedBox(width: SdSpace.sm),
-                Expanded(child: second),
-              ],
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -32,10 +32,13 @@ class AppDrawerScreen extends StatelessWidget {
 
 /// App grid with search, paged by large up/down buttons (easier than flinging while parked).
 class AppDrawerPanel extends ConsumerStatefulWidget {
-  const AppDrawerPanel({super.key, this.onClose});
+  const AppDrawerPanel({super.key, this.onClose, this.inset = EdgeInsets.zero});
 
   /// Defaults to closing the dashboard's drawer.
   final VoidCallback? onClose;
+
+  /// Space covered by something floating over the panel (the rail); the background still fills it.
+  final EdgeInsets inset;
 
   @override
   ConsumerState<AppDrawerPanel> createState() => _AppDrawerPanelState();
@@ -96,7 +99,9 @@ class _AppDrawerPanelState extends ConsumerState<AppDrawerPanel> {
                 hintText: 'Search apps',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
-                fillColor: scheme.surfaceContainerHighest,
+                fillColor: scheme.surfaceContainerHighest.withValues(
+                  alpha: 0.7,
+                ),
                 border: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(28)),
                   borderSide: BorderSide.none,
@@ -206,17 +211,51 @@ class _AppDrawerPanelState extends ConsumerState<AppDrawerPanel> {
       },
     );
 
-    return Material(
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(SdRadius.card),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          header,
-          Expanded(child: body),
-        ],
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(SdRadius.card),
+      child: DecoratedBox(
+        // Static accent glows over the surface read as a blurred backdrop without a blur pass.
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.alphaBlend(
+                scheme.primary.withValues(alpha: 0.32),
+                scheme.surface,
+              ),
+              scheme.surface,
+              Color.alphaBlend(
+                scheme.tertiary.withValues(alpha: 0.24),
+                scheme.surface,
+              ),
+            ],
+          ),
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(0.7, -0.6),
+              radius: 0.9,
+              colors: [
+                scheme.secondary.withValues(alpha: 0.2),
+                scheme.secondary.withValues(alpha: 0),
+              ],
+            ),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Padding(
+              padding: widget.inset,
+              child: Column(
+                children: [
+                  header,
+                  Expanded(child: body),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -285,7 +324,7 @@ class _ExitTile extends ConsumerWidget {
   }
 }
 
-/// Icon over a two-line label, the shared shape of every drawer entry.
+/// Icon over a one-line label (keeps the grid rows aligned), the shared shape of every drawer entry.
 class _Tile extends StatelessWidget {
   const _Tile({
     required this.label,
@@ -316,7 +355,7 @@ class _Tile extends StatelessWidget {
             label,
             style: Theme.of(context).textTheme.bodyMedium
                 ?.copyWith(color: Theme.of(context).colorScheme.onSurface),
-            maxLines: 2,
+            maxLines: 1,
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
           ),

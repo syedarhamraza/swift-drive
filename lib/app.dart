@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/app_state.dart';
@@ -41,6 +42,14 @@ class _SwiftDriveAppState extends ConsumerState<SwiftDriveApp> {
         ref.read(resumeTickProvider.notifier).bump();
       },
       onHide: () => ref.read(foregroundProvider.notifier).set(false),
+    );
+    // Flutter re-applies the chosen mode when the activity resumes, so setting it on change is enough.
+    ref.listenManual(
+      settingsProvider.select((s) => s.fullScreen),
+      (_, full) => SystemChrome.setEnabledSystemUIMode(
+        full ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
+      ),
+      fireImmediately: true,
     );
     // HOME pressed while SwiftDrive is on top: go back to the dashboard.
     _homeSub = ref.read(launcherRepositoryProvider).homePressed.listen((_) {

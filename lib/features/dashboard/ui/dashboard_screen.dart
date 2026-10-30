@@ -56,34 +56,33 @@ class DashboardScreen extends ConsumerWidget {
               showSpeed: showSpeed,
               radioConfigured: radio,
             );
-            final map = ClipRRect(
-              borderRadius: BorderRadius.circular(SdRadius.card),
-              child: MapPanel(key: _mapKey),
-            );
-            final content = Padding(
+            // The side rail floats over the left edge of the map and the drawer, so they start behind it.
+            final area = Padding(
               padding: const EdgeInsets.all(SdSpace.sm),
-              child: Flex(
-                direction: g.stacked ? Axis.vertical : Axis.horizontal,
-                children: [
-                  Expanded(flex: g.mapFlex, child: map),
-                  _gap,
-                  Expanded(
-                    flex: g.sideFlex,
-                    child: _SidePanel(geometry: g, drawerOpen: drawerOpen),
-                  ),
-                ],
+              child: LayoutBuilder(
+                builder: (context, inner) => _Panes(
+                  geometry: g,
+                  size: inner.biggest,
+                  drawerOpen: drawerOpen,
+                  cover: g.dockOnLeft ? railExtent - 2 * SdSpace.sm : 0,
+                ),
               ),
             );
             return g.dockOnLeft
-                ? Row(
+                ? Stack(
                     children: [
-                      const Dock(vertical: true),
-                      Expanded(child: SafeArea(left: false, child: content)),
+                      Positioned.fill(child: SafeArea(child: area)),
+                      const Positioned(
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        child: Dock(vertical: true),
+                      ),
                     ],
                   )
                 : Column(
                     children: [
-                      Expanded(child: SafeArea(bottom: false, child: content)),
+                      Expanded(child: SafeArea(bottom: false, child: area)),
                       const Dock(vertical: false),
                     ],
                   );
@@ -94,12 +93,98 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-/// Cards beside the map. The app drawer slides in over them so the map stays visible.
-class _SidePanel extends StatelessWidget {
-  const _SidePanel({required this.geometry, required this.drawerOpen});
+/// Map and cards side by side. Opening the drawer puts it where the map was and slides the map over the
+/// cards, so the map stays visible while picking an app.
+class _Panes extends StatelessWidget {
+  const _Panes({
+    required this.geometry,
+    required this.size,
+    required this.drawerOpen,
+    required this.cover,
+  });
 
   final DashboardGeometry geometry;
+  final Size size;
   final bool drawerOpen;
+
+  /// How far the rail overlaps the first pane.
+  final double cover;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = geometry;
+    final horizontal = !g.stacked;
+    final length = horizontal ? size.width : size.height;
+    final split =
+        cover +
+        (length - cover - SdSpace.sm) * g.mapFlex / (g.mapFlex + g.sideFlex);
+    final sideStart = split + SdSpace.sm;
+    Rect span(double start, double end) => horizontal
+        ? Rect.fromLTRB(start, 0, end, size.height)
+        : Rect.fromLTRB(0, start, size.width, end);
+    final duration = SdMotion.of(context, SdMotion.medium);
+
+    return Stack(
+      children: [
+        Positioned.fromRect(
+          rect: span(sideStart, length),
+          // Cards stay alive under the map (keeping the pager page) but stop ticking.
+          child: TickerMode(
+            enabled: !drawerOpen,
+            child: _SidePanel(geometry: g),
+          ),
+        ),
+        AnimatedPositioned.fromRect(
+          duration: duration,
+          curve: SdMotion.curve,
+          rect: drawerOpen ? span(sideStart, length) : span(0, split),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(SdRadius.card),
+            child: MapPanel(
+              key: DashboardScreen._mapKey,
+              leftInset: drawerOpen || !horizontal ? 0 : cover,
+            ),
+          ),
+        ),
+        Positioned.fromRect(
+          rect: span(0, split),
+          child: AnimatedSwitcher(
+            duration: duration,
+            switchInCurve: SdMotion.curve,
+            switchOutCurve: SdMotion.exitCurve,
+            layoutBuilder: (current, previous) =>
+                Stack(fit: StackFit.expand, children: [...previous, ?current]),
+            // Slides out from behind the rail.
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween(
+                  begin: horizontal
+                      ? const Offset(-0.15, 0)
+                      : const Offset(0, -0.15),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: drawerOpen
+                ? AppDrawerPanel(
+                    key: const ValueKey('drawer'),
+                    inset: EdgeInsets.only(left: horizontal ? cover : 0),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Cards beside the map: a column and, when there is room or nothing else, the pager.
+class _SidePanel extends StatelessWidget {
+  const _SidePanel({required this.geometry});
+
+  final DashboardGeometry geometry;
 
   static Widget _card(DashboardWidget w) => RepaintBoundary(
     child: switch (w) {
@@ -144,7 +229,7 @@ class _SidePanel extends StatelessWidget {
         ],
       ],
     );
-    final cards = g.pagerBeside && pager != null
+    return g.pagerBeside && pager != null
         ? Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -154,33 +239,5 @@ class _SidePanel extends StatelessWidget {
             ],
           )
         : column;
-
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        // Cards stay alive under the drawer (keeping the pager page) but stop ticking.
-        TickerMode(enabled: !drawerOpen, child: cards),
-        AnimatedSwitcher(
-          duration: SdMotion.of(context, SdMotion.medium),
-          switchInCurve: SdMotion.curve,
-          switchOutCurve: SdMotion.exitCurve,
-          layoutBuilder: (current, previous) =>
-              Stack(fit: StackFit.expand, children: [...previous, ?current]),
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween(
-                begin: const Offset(-0.04, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: child,
-            ),
-          ),
-          child: drawerOpen
-              ? const AppDrawerPanel(key: ValueKey('drawer'))
-              : const SizedBox.shrink(),
-        ),
-      ],
-    );
   }
 }

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/format.dart';
 import '../../../core/storage/settings_providers.dart';
 import '../../../core/theme/tokens.dart';
+import '../../../core/widgets/common.dart';
 import '../data/weather_repository.dart';
 import '../state/weather_providers.dart';
 import 'weather_card.dart';
@@ -19,20 +20,16 @@ class WeatherPanel extends ConsumerWidget {
     final weather = ref.watch(weatherProvider);
     final use24h = ref.watch(settingsProvider.select((s) => s.use24h));
     final data = weather.data;
-    final scheme = Theme.of(context).colorScheme;
-    final t = Theme.of(context).textTheme;
-    // A faint accent tint sets the weather page apart from the neutral cards around it.
-    final tint = Color.alphaBlend(
-      scheme.primaryContainer.withValues(alpha: 0.4),
-      scheme.surface,
-    );
+    // The sky gradient is dark in both themes, so text and icons are light.
+    final theme = onDarkBackdrop(Theme.of(context));
+    final t = theme.textTheme;
 
     if (data == null) {
-      return Card(
-        color: tint,
-        child: const Padding(
-          padding: EdgeInsets.all(SdSpace.lg),
-          child: Center(child: WeatherSummary()),
+      return Theme(
+        data: theme,
+        child: SdCard(
+          gradient: _sky(null),
+          child: const Center(child: WeatherSummary()),
         ),
       );
     }
@@ -43,9 +40,10 @@ class WeatherPanel extends ConsumerWidget {
     final hours = data.hourlyFrom(now).take(5).toList();
     final days = data.daily.skip(1).take(3).toList();
 
-    return Card(
-      color: tint,
-      child: Padding(
+    return Theme(
+      data: theme,
+      child: SdCard(
+        gradient: _sky(data),
         // Extra right padding keeps content clear of the pager dots.
         padding: const EdgeInsets.fromLTRB(
           SdSpace.lg,
@@ -101,6 +99,18 @@ class WeatherPanel extends ConsumerWidget {
     );
   }
 }
+
+/// Sky colours: blue by day, indigo at night, slate when overcast, foggy, raining or snowing.
+LinearGradient _sky(WeatherData? d) => LinearGradient(
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+  colors: switch (d) {
+    null => const [Color(0xFF2C3E5C), Color(0xFF16202F)],
+    WeatherData(code: >= 3) => const [Color(0xFF4A5A70), Color(0xFF1F2733)],
+    WeatherData(isDay: true) => const [Color(0xFF3A86D4), Color(0xFF1C4F91)],
+    _ => const [Color(0xFF2E3A78), Color(0xFF111633)],
+  },
+);
 
 class _Now extends ConsumerWidget {
   const _Now({

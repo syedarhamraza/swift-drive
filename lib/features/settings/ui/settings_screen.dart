@@ -195,6 +195,16 @@ class SettingsScreen extends ConsumerWidget {
           const _Header('Launcher'),
           const LauncherSetupSection(),
 
+          const _Header('Display'),
+          SwitchListTile(
+            title: const Text('Full screen'),
+            subtitle: const Text(
+              'Hide the status and navigation bars. Swipe from an edge to show them briefly.',
+            ),
+            value: s.fullScreen,
+            onChanged: (v) => c.update((x) => x.copyWith(fullScreen: v)),
+          ),
+
           const _Header('Performance'),
           SwitchListTile(
             title: const Text('Performance mode'),
