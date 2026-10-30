@@ -26,8 +26,9 @@ class NotificationsController extends Notifier<NotificationsState> {
   @override
   NotificationsState build() {
     ref.watch(resumeTickProvider);
+    // Contents are dropped whenever the launcher leaves the foreground (privacy); only access is kept.
     if (!ref.watch(foregroundProvider) || !ref.stageReached(3)) {
-      return stateOrNull ?? const NotificationsState();
+      return NotificationsState(access: stateOrNull?.access);
     }
     final repo = ref.watch(notificationsRepositoryProvider);
     var disposed = false;
@@ -49,7 +50,7 @@ class NotificationsController extends Notifier<NotificationsState> {
       onError: (Object e) =>
           AppLog.w('notifications', 'access check failed: $e'),
     );
-    // Contents are dropped whenever the launcher leaves the foreground (privacy).
+    // Starts empty; the listener stream delivers the current list.
     return NotificationsState(access: stateOrNull?.access);
   }
 

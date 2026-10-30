@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test integration_test
+      - run: flutter analyze
+      - run: flutter test
+
+      # No android/key.properties in CI, so the release APK is debug-signed (see docs/SECURITY.md).
+      - run: flutter build apk --release
+
+      # gradlew is gitignored; the Flutter build above generates it.
+      - name: Native unit tests
+        working-directory: android
+        run: ./gradlew :app:testDebugUnitTest
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: swiftdrive-apk
+          path: build/app/outputs/flutter-apk/app-release.apk

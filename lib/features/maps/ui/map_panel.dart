@@ -291,6 +291,9 @@ class _MapPanelState extends ConsumerState<MapPanel> {
                             ),
                       onMapCreated: _onMapCreated,
                       onStyleLoadedCallback: _onStyleLoaded,
+                      // Route and puck use our own layers. Plugin annotation managers would add 4 unused layers
+                      // and race style reloads (STYLE_NOT_READY on theme switch).
+                      annotationOrder: const [],
                       myLocationEnabled: true,
                       locationSource: const ManualLocationSource(),
                       myLocationTrackingMode: _trackingMode(),

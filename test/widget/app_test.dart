@@ -13,6 +13,8 @@ import 'package:swiftdrive/features/location/state/location_providers.dart';
 import 'package:swiftdrive/features/location/ui/speed_card.dart';
 import 'package:swiftdrive/features/media/data/media_repository.dart';
 import 'package:swiftdrive/features/media/ui/media_card.dart';
+import 'package:swiftdrive/features/notifications/data/notifications_repository.dart';
+import 'package:swiftdrive/features/notifications/state/notifications_providers.dart';
 import 'package:swiftdrive/features/onboarding/ui/onboarding_screen.dart';
 import 'package:swiftdrive/features/settings/ui/settings_screen.dart';
 import 'package:swiftdrive/features/weather/data/weather_repository.dart';
@@ -292,4 +294,29 @@ void main() {
     expect(fakes.location.events$.hasListener, isFalse);
     c.dispose();
   });
+
+  test(
+    'notification contents are dropped when the launcher is hidden',
+    () async {
+      c.listen(notificationsProvider, (_, _) {});
+      await pumpEventQueue();
+      fakes.notifications.items$.add([
+        NotificationItem(
+          key: 'k',
+          packageName: 'p',
+          appLabel: 'P',
+          title: 'Hi',
+          postTime: DateTime(2026),
+          clearable: true,
+        ),
+      ]);
+      await pumpEventQueue();
+      expect(c.read(notificationsProvider).items, hasLength(1));
+      c.read(foregroundProvider.notifier).set(false);
+      final hidden = c.read(notificationsProvider);
+      expect(hidden.items, isEmpty);
+      expect(hidden.access, isTrue);
+      c.dispose();
+    },
+  );
 }
