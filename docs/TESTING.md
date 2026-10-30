@@ -5,7 +5,7 @@
 | Suite | Location | Runs on | Count |
 |---|---|---|---|
 | Dart unit tests | `test/unit/` | host (`flutter test`) | 52 |
-| Widget tests | `test/widget/` | host (`flutter test`) | 19 |
+| Widget tests | `test/widget/` | host (`flutter test`) | 21 |
 | Native JUnit tests | `android/app/src/test/` | host JVM (`./gradlew :app:testDebugUnitTest`) | 4 |
 | Integration test | `integration_test/` | emulator or device, real platform channels | 1 flow |
 
@@ -50,6 +50,8 @@ by the fakes in `test/fakes/fakes.dart`. The fakes are never imported by `lib/`.
 
 - Dashboard at **1024×600, 1280×720, 1280×800, 1920×720** and phone portrait: no overflow, and Settings is
   reachable from the dock.
+- Dock at 683×400 dp (a 1024×600 hdpi unit): every button is on screen, and Settings stays on screen when the
+  user pins more apps than fit (the rest of the dock scrolls).
 - Instant theme switch. First run shows onboarding, and *Skip* persists onboarding as done.
 - Media card: no-access state links to settings; a playing session shows metadata and sends pause/next.
 - Speed card: acquiring → 36 km/h from a 10 m/s fix; GPS-off state with a *Turn on* action.
@@ -100,9 +102,9 @@ example Android Studio's `jbr` folder.
 
 Run on 2026-10-30, Windows 11, Flutter 3.47.5:
 - `flutter analyze`: no issues.
-- `flutter test`: 71 passed, 0 failed.
+- `flutter test`: 73 passed, 0 failed (52 unit, 21 widget).
 - JUnit: 4 passed, 0 failed.
-- Integration (emulator `SwiftDrive_HU_1280x800`, API 28): see the final report in the commit history.
+- Integration: passed on the emulator `SwiftDrive_HU_1280x800` (API 28) and on the vivo V2413 (Android 16).
 
-The phone (vivo V2413) was not used for the integration test because it was locked, and USB debugging later
-disconnected.
+`flutter test integration_test` replaces `build/app/outputs/flutter-apk/app-debug.apk` with the test harness.
+Rebuild with `flutter build apk --debug` before installing it by hand.

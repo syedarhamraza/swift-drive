@@ -225,7 +225,8 @@ class _NowPlaying extends ConsumerWidget {
 }
 
 /// Progress extrapolated locally from the last reported position. Ticks once a second, only while
-/// playing and visible (TickerMode is off when a route covers the dashboard).
+/// playing and visible (TickerMode is off when a route covers the dashboard) and not in performance mode,
+/// where it moves only when the player reports a new position.
 class _Progress extends ConsumerStatefulWidget {
   const _Progress({required this.session});
 
@@ -246,6 +247,7 @@ class _ProgressState extends ConsumerState<_Progress> {
       if (mounted &&
           widget.session.isPlaying &&
           TickerMode.valuesOf(context).enabled &&
+          !ref.read(settingsProvider).performanceMode &&
           _dragValue == null) {
         setState(() {});
       }

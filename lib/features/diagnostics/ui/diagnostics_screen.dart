@@ -216,7 +216,8 @@ class _DebugMetrics extends ConsumerWidget {
       subtitle: Text(
         'Last $frames frames: build ${build.toStringAsFixed(1)} ms, raster ${raster.toStringAsFixed(1)} ms, $slow over 16 ms\n'
         'First frame: ${PerfMetrics.firstFrameTime?.inMilliseconds ?? '–'} ms · '
-        'Map style load: ${PerfMetrics.mapInitTime?.inMilliseconds ?? '–'} ms · Media sessions: $sessions',
+        'Map style load: ${PerfMetrics.mapInitTime?.inMilliseconds ?? '–'} ms · Media sessions: $sessions\n'
+        'Frames per 10 s (oldest first): ${PerfMetrics.framesPer10s.join(', ')}',
       ),
     );
   }

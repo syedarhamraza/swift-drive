@@ -96,6 +96,23 @@ void main() {
       await tearDownScreen(tester, c);
     });
 
+    testWidgets('Settings stays on screen when the dock overflows', (
+      tester,
+    ) async {
+      c = await makeContainer(
+        fakes,
+        settings: const LauncherSettings(
+          onboardingDone: true,
+          mapEnabled: false,
+          dock: [...defaultDock, 'app:com.example.a/.Main', 'builtin:apps'],
+        ),
+      );
+      await pumpApp(tester, c, size: const Size(683, 400));
+      expect(find.byTooltip('Settings').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tearDownScreen(tester, c);
+    });
+
     testWidgets('theme follows the setting instantly', (tester) async {
       await pumpApp(tester, c);
       Brightness brightness() =>

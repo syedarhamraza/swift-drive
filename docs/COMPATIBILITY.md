@@ -16,8 +16,8 @@ No vehicle-specific feature is claimed.
 
 | Device | Android | Result |
 |---|---|---|
-| AVD 1280×800 @160 dpi, AOSP image, no Play Services | 9 (API 28) | Verified: onboarding, dashboard, map with OpenFreeMap, injected GPS position, Open-Meteo weather, diagnostics, drawer, theme switch, integration test |
-| vivo V2413 (phone) | 16 (API 36) | Debug APK installs and starts (first frame logged). Screens not inspected: the phone was locked |
+| AVD 1280×800 @160 dpi, AOSP image, no Play Services | 9 (API 28) | Verified: onboarding, dashboard, map with OpenFreeMap, injected GPS position, Open-Meteo weather, diagnostics, drawer, theme switch, integration test, release APK (x86_64) start. With the `swiftshader_indirect` GPU the map draws no labels and no location puck (MapLibre symbol rendering fails with `std::bad_alloc`); both render on the phone's real GPU |
+| vivo V2413 (phone, 2800×1260, landscape ≈ 933×420 dp) | 16 (API 36) | Verified: integration test; real GPS puck, map labels and follow mode; weather with a Geocoder place name; all permission prompts; Bluetooth status; set-default and return-to-factory launcher entries; drawer lists and launches real apps, Back returns; dock fits icon-only |
 | Generic Chinese Android head units | 9–13 | Expected. Not tested |
 | Suzuki Swift GLX CVT 2026 (Pakistan) head unit | unknown | **Unknown. Not tested.** See HARDWARE_TESTING.md |
 
@@ -52,4 +52,7 @@ No vehicle-specific feature is claimed.
 - **Location providers on API < 30:** `onStatusChanged`, `onProviderEnabled` and `onProviderDisabled` are
   overridden explicitly to avoid `AbstractMethodError`.
 - **Screen sizes:** 1024×600, 1280×720, 1280×800 and 1920×720 are covered by widget tests. Small screens switch
-  to the compact layout automatically.
+  to the compact layout automatically. On short screens dock buttons shrink to icon-only (48 dp minimum) and the
+  dock scrolls, with Settings pinned so it is always reachable.
+- **vivo log throttling:** vivo phones rate-limit app logcat output (`persist.log.ratelimit`), which also breaks
+  `flutter run`'s log reader. Debug and profile builds show their metrics on the Diagnostics screen instead.

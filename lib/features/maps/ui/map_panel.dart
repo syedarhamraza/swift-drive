@@ -15,6 +15,7 @@ import '../../apps/ui/app_picker.dart';
 import '../../location/data/location_repository.dart';
 import '../../location/state/location_providers.dart';
 import '../../navigation/data/navigation_models.dart';
+import '../../navigation/domain/route_geometry.dart';
 import '../../navigation/state/navigation_providers.dart';
 import '../../navigation/ui/destination_sheet.dart';
 import '../../navigation/ui/nav_banner.dart';
@@ -38,6 +39,7 @@ class _MapPanelState extends ConsumerState<MapPanel> {
   bool _follow = true;
   bool _failed = false;
   bool _zoomedToFirstFix = false;
+  LocationFix? _lastPushed;
   int _generation = 0;
   Timer? _timeout;
   final _initWatch = Stopwatch();
@@ -109,7 +111,8 @@ class _MapPanelState extends ConsumerState<MapPanel> {
     }
     if (mounted) setState(() => _styleLoaded = true);
     final fix = ref.read(locationProvider).fix;
-    if (fix != null) _pushFix(fix);
+    // A (re)loaded style has a fresh location component, so always push.
+    if (fix != null) _pushFix(fix, force: true);
   }
 
   static String _hex(Color c) =>
@@ -190,9 +193,28 @@ class _MapPanelState extends ConsumerState<MapPanel> {
     );
   }
 
-  void _pushFix(LocationFix fix) {
+  /// Every pushed fix re-runs the native puck/camera animation (~100 frames on the test phone), so
+  /// near-duplicates from a parked car are skipped; a periodic push keeps the puck from looking stale
+  /// (MapLibre greys it after 30 s without an update, and the plugin does not expose that timeout).
+  bool _worthPushing(LocationFix fix) {
+    final last = _lastPushed;
+    if (last == null ||
+        monotonicNow() - last.fixTime > const Duration(seconds: 25)) {
+      return true;
+    }
+    final moved = haversine(
+      GeoPoint(last.lat, last.lon),
+      GeoPoint(fix.lat, fix.lon),
+    );
+    final turned = ((fix.bearing ?? 0) - (last.bearing ?? 0)).abs() % 360;
+    return moved > 3 || (turned > 10 && turned < 350);
+  }
+
+  void _pushFix(LocationFix fix, {bool force = false}) {
     final c = _controller;
     if (c == null || !_styleLoaded) return;
+    if (!force && !_worthPushing(fix)) return;
+    _lastPushed = fix;
     c
         .updateManualLocation(
           ManualLocationUpdate(

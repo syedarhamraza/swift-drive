@@ -57,19 +57,15 @@ class Dock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Settings is pinned at the end, outside the scrolling part, so it stays reachable even when the user
+    // removed it from the dock or added more entries than fit.
     final entries = ref
         .watch(settingsProvider.select((s) => s.dock))
         .map(DockEntry.parse)
         .nonNulls
+        .where((e) => !(e is BuiltinEntry && e.id == 'settings'))
         .toList();
-    final hasSettings = entries.any(
-      (e) => e is BuiltinEntry && e.id == 'settings',
-    );
-    final shown = [
-      ...entries,
-      // Settings must always be reachable, even if the user removed it from the dock.
-      if (!hasSettings) const BuiltinEntry('settings'),
-    ];
+    const padding = EdgeInsets.all(SdSpace.sm);
     return Material(
       color: Theme.of(context).colorScheme.surface,
       child: SafeArea(
@@ -83,16 +79,38 @@ class Dock extends ConsumerWidget {
               // Shrink buttons so the whole dock fits (e.g. 1024x600 at hdpi is only ~400 dp tall); below the
               // minimum touch target the dock scrolls instead.
               final main = vertical ? box.maxHeight : box.maxWidth;
-              final extent = ((main - 2 * SdSpace.sm) / shown.length).clamp(
-                SdSize.minTarget,
-                72.0,
-              );
-              return ListView(
-                scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
-                padding: const EdgeInsets.all(SdSpace.sm),
+              final extent = ((main - 2 * SdSpace.sm) / (entries.length + 1))
+                  .clamp(SdSize.minTarget, 72.0);
+              final axis = vertical ? Axis.vertical : Axis.horizontal;
+              return Flex(
+                direction: axis,
                 children: [
-                  for (final e in shown)
-                    _DockButton(entry: e, extent: extent, vertical: vertical),
+                  Expanded(
+                    child: ListView(
+                      scrollDirection: axis,
+                      padding: vertical
+                          ? padding.copyWith(bottom: 0)
+                          : padding.copyWith(right: 0),
+                      children: [
+                        for (final e in entries)
+                          _DockButton(
+                            entry: e,
+                            extent: extent,
+                            vertical: vertical,
+                          ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: vertical
+                        ? padding.copyWith(top: 0)
+                        : padding.copyWith(left: 0),
+                    child: _DockButton(
+                      entry: const BuiltinEntry('settings'),
+                      extent: extent,
+                      vertical: vertical,
+                    ),
+                  ),
                 ],
               );
             },

@@ -37,7 +37,7 @@ abstract final class AppLog {
   static void _add(LogLevel level, String tag, String message) {
     if (_entries.length == capacity) _entries.removeFirst();
     _entries.add(LogEntry(level, tag, message));
-    if (kDebugMode) debugPrint('[${level.name}] $tag: $message');
+    if (!kReleaseMode) debugPrint('[${level.name}] $tag: $message');
   }
 
   static void clear() => _entries.clear();
